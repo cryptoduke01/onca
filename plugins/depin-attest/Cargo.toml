@@ -1,0 +1,31 @@
+[package]
+name = "depin-attest"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "ZeroClaw tool plugin (T1): turn a sensor reading into an unsigned Solana attestation transaction, with a replay guard. Makes a ZeroClaw device a Solana-reporting DePIN node."
+publish = false
+
+# cdylib for the wasm component; rlib so the pure `attest` core is host-tested
+# with a plain `cargo test` against a mock RPC (no wasm toolchain, no network).
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wit-bindgen = "0.46"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+onca-core = { path = "../../crates/onca-core" }
+
+# wasi:http client — only compiled for the wasm component, never on the host.
+[target.'cfg(target_family = "wasm")'.dependencies]
+waki = { version = "0.5.1", features = ["json"] }
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
+codegen-units = 1
+
+# Standalone crate: built for wasm32-wasip2, not part of any host workspace.
+[workspace]

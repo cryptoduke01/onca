@@ -76,8 +76,10 @@ pub mod known {
     pub const ASSOCIATED_TOKEN_PROGRAM: &str = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
     /// System program (also the all-ones base58 `111…`).
     pub const SYSTEM_PROGRAM: &str = "11111111111111111111111111111111";
-    /// Memo program v2 — used for invoice references.
+    /// Memo program v2 — used for invoice references and DePIN attestations.
     pub const MEMO_PROGRAM: &str = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
+    /// RecentBlockhashes sysvar — referenced by `AdvanceNonceAccount`.
+    pub const RECENT_BLOCKHASHES_SYSVAR: &str = "SysvarRecentB1ockHashes11111111111111111111";
     /// Native mint (wrapped SOL).
     pub const WSOL_MINT: &str = "So11111111111111111111111111111111111111112";
     /// Circle USDC mainnet mint.

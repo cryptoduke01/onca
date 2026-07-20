@@ -11,6 +11,9 @@
 //!   [`rpc::RpcTransport`] trait, so the whole RPC layer is host-testable.
 //! - [`shape`] — amount rendering/parsing and output clamping, so plugins return
 //!   the ~200 tokens the model needs, not 40KB of RPC JSON.
+//! - [`tx`] — hand-rolled Solana transaction assembly (no `solana-sdk`): the
+//!   compact-u16 prefix, legacy message compilation, base64, the SPL Memo
+//!   instruction, and the durable-nonce advance for approval-gated flows.
 //! - [`error::CoreError`] — a flat, secret-free error type safe to surface.
 //!
 //! Each plugin supplies the actual HTTP by implementing `RpcTransport` with the
@@ -20,6 +23,7 @@ pub mod error;
 pub mod pubkey;
 pub mod rpc;
 pub mod shape;
+pub mod tx;
 
 pub use error::{CoreError, Result};
 pub use pubkey::Pubkey;

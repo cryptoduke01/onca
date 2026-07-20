@@ -1,0 +1,11 @@
+name = "depin-attest"
+version = "0.1.0"
+description = "Record a hardware sensor reading on Solana as a signed attestation with a replay guard; turns a ZeroClaw device into a Solana-reporting DePIN node"
+author = "cryptoduke01"
+wasm_path = "depin_attest.wasm"
+capabilities = ["tool"]
+# http_client: fetch a recent blockhash (or the durable-nonce value) from the
+# operator's Solana endpoint (TLS host-side).
+# config_read: read `device`, `rpc_url`, reading bounds, `min_seq`, and optional
+# durable-nonce accounts from this plugin's own config section. No key hardcoded.
+permissions = ["http_client", "config_read"]

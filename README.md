@@ -39,18 +39,21 @@ and the threat model for the whole suite.
 
 | Component | Tier | Holds | What it does |
 |---|---|---|---|
-| [`onca-core`](crates/onca-core) | — | nothing | The shared Solana library: base58, pubkey, JSON-RPC, amount math. Pure Rust, no input or output. Every plugin uses it. |
+| [`onca-core`](crates/onca-core) | — | nothing | The shared Solana library: base58, pubkey, JSON-RPC, amount math, and hand-rolled transaction assembly (memo, durable nonce). Pure Rust, no input or output. Every plugin uses it. |
 | [`solana-pay-request`](plugins/solana-pay-request) | T1 | nothing | Turns a request such as "charge table 4 for 25 USDC" into a Solana Pay URL and QR code. A person signs it. |
 | [`token-risk-check`](plugins/token-risk-check) | T0 | RPC key | Reads a mint and gives a red, amber, or green verdict: authorities, Token-2022 traps, and holder concentration. |
 | [`payment-watch`](plugins/payment-watch) | T0 | RPC key | Watches a Solana Pay reference and confirms that an invoice was paid: the right amount, to the right wallet. |
+| [`depin-attest`](plugins/depin-attest) | T1 | nothing | Turns a sensor reading into an unsigned attestation transaction with a replay guard. A ZeroClaw device becomes a Solana-reporting DePIN node. |
 
 Read the tiers this way. A T0 tool reads and reports. A T1 tool builds a request
 that a person signs. Onca has no T2 tool. A T2 tool signs and sends. That tier
 is where one successful attack empties a wallet, and no tool here needs it.
 
-The three plugins make one story. `solana-pay-request` asks for money.
-`payment-watch` confirms that the money arrived. `token-risk-check` stops the
-agent before it touches a bad token. All three use `onca-core`.
+The plugins reach from payments to the physical edge. `solana-pay-request` asks
+for money. `payment-watch` confirms it arrived. `token-risk-check` stops the
+agent before it touches a bad token. `depin-attest` lets a device report a
+sensor reading to Solana. All of them build on `onca-core`, and none of them
+holds a key that can spend.
 
 ## The core
 
@@ -61,9 +64,14 @@ these. To solve the problem one time, the Solana code lives in one place:
 [`onca-core`](crates/onca-core).
 
 The core is a plain library. It has no wasm dependency and it does no input or
-output. It parses an address, builds a JSON-RPC request, reads the response, and
-converts base units to human amounts. The one thing it does not do is make the
-HTTP call. A trait does that:
+output. It parses an address, builds a JSON-RPC request, reads the response,
+converts base units to human amounts, and assembles Solana transactions by hand
+— the compact-u16 prefix, the legacy message layout, base64, the SPL Memo
+instruction, and the durable-nonce advance that lets an approval-gated
+transaction survive the wait for a human to sign (the bounty's blockhash-expiry
+trap). The transaction code is tested against RFC 4648 and the documented
+compact-u16 vectors. The one thing the core does not do is make the HTTP call. A
+trait does that:
 
 ```rust
 pub trait RpcTransport {
