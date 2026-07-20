@@ -12,7 +12,7 @@
 
 use std::collections::HashMap;
 
-use solana_core::pubkey::{known, Pubkey};
+use onca_core::pubkey::{known, Pubkey};
 
 /// Operator-set guardrails, resolved from the plugin's own config section. Every
 /// field is a ceiling or an allowlist: config can only *restrict* what the tool
@@ -113,9 +113,30 @@ fn encode(s: &str) -> String {
     out
 }
 
-/// Validate an amount string: a positive, finite decimal within `max_amount`.
+/// True only for a plain decimal: digits, at most one `.`, at least one digit.
+/// Rejects scientific notation (`1e5`), signs, `inf`/`nan`, and thousands
+/// separators — none of which belong in a Solana Pay `amount`.
+fn is_plain_decimal(s: &str) -> bool {
+    let mut seen_dot = false;
+    let mut seen_digit = false;
+    for c in s.chars() {
+        match c {
+            '0'..='9' => seen_digit = true,
+            '.' if !seen_dot => seen_dot = true,
+            _ => return false,
+        }
+    }
+    seen_digit
+}
+
+/// Validate an amount string: a positive, plain decimal within `max_amount`.
 fn validate_amount(amount: &str, max: Option<f64>) -> Result<String, String> {
     let a = amount.trim();
+    if !is_plain_decimal(a) {
+        return Err(format!(
+            "amount '{a}' must be a plain decimal number (e.g. \"25\" or \"1.5\")"
+        ));
+    }
     let parsed: f64 = a
         .parse()
         .map_err(|_| format!("amount '{a}' is not a number"))?;
@@ -193,7 +214,7 @@ pub fn build_request(args: &PayArgs, cfg: &PayConfig) -> Result<PayRequest, Stri
 
     let summary = format!(
         "Payment request: {amount} {token_label} to {}{}",
-        solana_core::shape::abbrev(&recipient.to_base58()),
+        onca_core::shape::abbrev(&recipient.to_base58()),
         memo_suffix(&args.memo),
     );
 
@@ -206,15 +227,15 @@ fn short_symbol(raw: &str, mint: &str) -> String {
     if matches!(up.as_str(), "USDC" | "USDT" | "SOL") {
         up
     } else if mint.is_empty() {
-        solana_core::shape::abbrev(raw)
+        onca_core::shape::abbrev(raw)
     } else {
-        solana_core::shape::abbrev(mint)
+        onca_core::shape::abbrev(mint)
     }
 }
 
 fn memo_suffix(memo: &Option<String>) -> String {
     match memo {
-        Some(m) if !m.is_empty() => format!(" — memo: {}", solana_core::shape::clamp_text(m, 60)),
+        Some(m) if !m.is_empty() => format!(" — memo: {}", onca_core::shape::clamp_text(m, 60)),
         _ => String::new(),
     }
 }
@@ -295,6 +316,28 @@ mod tests {
     fn rejects_zero_and_negative() {
         for bad in ["0", "-5", "abc"] {
             assert!(build_request(&args(MERCHANT, bad, Some("USDC")), &PayConfig::default()).is_err());
+        }
+    }
+
+    #[test]
+    fn rejects_non_plain_decimal_amounts() {
+        // scientific notation, infinity, thousands separators, hex — all would
+        // otherwise parse as f64 or land malformed in the URL.
+        for bad in ["1e5", "1E5", "inf", "NaN", "25,00", "0x10", "+5", "1.2.3"] {
+            assert!(
+                build_request(&args(MERCHANT, bad, Some("USDC")), &PayConfig::default()).is_err(),
+                "{bad} should be rejected"
+            );
+        }
+    }
+
+    #[test]
+    fn accepts_plain_decimals() {
+        for good in ["25", "1.5", "0.000001", ".5", "100"] {
+            assert!(
+                build_request(&args(MERCHANT, good, Some("USDC")), &PayConfig::default()).is_ok(),
+                "{good} should be accepted"
+            );
         }
     }
 }

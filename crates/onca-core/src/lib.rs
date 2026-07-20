@@ -1,4 +1,4 @@
-//! # solana-core
+//! # onca-core
 //!
 //! A small, MIT-licensed Solana substrate that compiles for `wasm32-wasip2`
 //! inside a ZeroClaw WIT component — *without* `solana-sdk` or `solana-client`,

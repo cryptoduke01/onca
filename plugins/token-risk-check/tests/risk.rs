@@ -6,7 +6,7 @@
 use std::collections::HashMap;
 
 use serde_json::{json, Value};
-use solana_core::rpc::RpcTransport;
+use onca_core::rpc::RpcTransport;
 use token_risk_check::risk::{analyze, Severity};
 
 /// A mock endpoint: maps a JSON-RPC method name to the `result` value it should
@@ -23,7 +23,7 @@ impl MockRpc {
     }
 }
 impl RpcTransport for MockRpc {
-    fn post_json(&self, _url: &str, body: &str) -> solana_core::Result<String> {
+    fn post_json(&self, _url: &str, body: &str) -> onca_core::Result<String> {
         let req: Value = serde_json::from_str(body).unwrap();
         let method = req["method"].as_str().unwrap_or("");
         let result = self

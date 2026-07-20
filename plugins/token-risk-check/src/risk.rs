@@ -9,9 +9,9 @@
 
 use serde_json::Value;
 
-use solana_core::pubkey::known;
-use solana_core::rpc::{commitment, RpcClient, RpcTransport};
-use solana_core::shape::{abbrev, render_amount};
+use onca_core::pubkey::known;
+use onca_core::rpc::{commitment, RpcClient, RpcTransport};
+use onca_core::shape::{abbrev, render_amount};
 
 /// Severity of a single finding, and of the report overall (the max of its
 /// flags). Ordered so `max` gives the worst.
@@ -319,7 +319,7 @@ fn pct(part: u128, whole: u128) -> f64 {
 /// `waki`. No I/O lives in this crate — the transport does it.
 pub fn analyze<T: RpcTransport>(rpc_url: &str, transport: &T, mint: &str) -> Result<RiskReport, String> {
     // Validate the mint address before spending an RPC call on it.
-    let mint = solana_core::Pubkey::from_base58(mint)
+    let mint = onca_core::Pubkey::from_base58(mint)
         .map_err(|e| format!("invalid mint address: {e}"))?
         .to_base58();
 

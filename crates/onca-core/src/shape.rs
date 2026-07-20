@@ -10,7 +10,12 @@ pub fn render_amount(base_units: u128, decimals: u8) -> String {
     if decimals == 0 {
         return base_units.to_string();
     }
-    let divisor = 10u128.pow(decimals as u32);
+    // 10^39 overflows u128. A mint reporting decimals that large is degenerate;
+    // fall back to the raw integer rather than panicking inside `execute`.
+    let divisor = match 10u128.checked_pow(decimals as u32) {
+        Some(d) => d,
+        None => return base_units.to_string(),
+    };
     let whole = base_units / divisor;
     let frac = base_units % divisor;
     if frac == 0 {
@@ -55,7 +60,9 @@ pub fn parse_amount(input: &str, decimals: u8) -> Result<u128, String> {
             .parse()
             .map_err(|_| "invalid fractional part".to_string())?
     };
-    let divisor = 10u128.pow(decimals as u32);
+    let divisor = 10u128
+        .checked_pow(decimals as u32)
+        .ok_or_else(|| format!("unsupported decimals: {decimals}"))?;
     whole
         .checked_mul(divisor)
         .and_then(|w| w.checked_add(frac_val))
@@ -127,5 +134,13 @@ mod tests {
     fn clamps() {
         assert_eq!(clamp_text("hello", 10), "hello");
         assert_eq!(clamp_text("hello world", 5), "hell…");
+    }
+
+    #[test]
+    fn absurd_decimals_do_not_panic() {
+        // A hostile/malformed mint could report huge decimals. Neither path may
+        // panic on the 10^n overflow.
+        assert_eq!(render_amount(1_000_000, 255), "1000000");
+        assert!(parse_amount("1", 255).is_err());
     }
 }

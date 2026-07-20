@@ -29,7 +29,7 @@ mod component {
     use crate::risk::analyze;
     use exports::zeroclaw::plugin::plugin_info::Guest as PluginInfo;
     use exports::zeroclaw::plugin::tool::{Guest as Tool, ToolResult};
-    use solana_core::rpc::RpcTransport;
+    use onca_core::rpc::RpcTransport;
     use zeroclaw::plugin::logging::{
         log_record, LogLevel, PluginAction, PluginEvent, PluginOutcome,
     };
@@ -52,18 +52,26 @@ mod component {
     /// is never logged.
     struct WakiTransport;
     impl RpcTransport for WakiTransport {
-        fn post_json(&self, url: &str, body: &str) -> solana_core::Result<String> {
+        fn post_json(&self, url: &str, body: &str) -> onca_core::Result<String> {
             let resp = waki::Client::new()
                 .post(url)
                 .header("Content-Type", "application/json")
                 .body(body.as_bytes().to_vec())
                 .send()
-                .map_err(|e| solana_core::CoreError::Transport(e.to_string()))?;
+                .map_err(|e| onca_core::CoreError::Transport(e.to_string()))?;
+            // Surface a non-2xx (rate limit, auth, node error) as a clean
+            // transport error instead of letting an HTML error page fall through
+            // as "not JSON". The status code carries no secret; the URL does, so
+            // it is never included.
+            let status = resp.status_code();
+            if !(200..300).contains(&status) {
+                return Err(onca_core::CoreError::Transport(format!("RPC returned HTTP {status}")));
+            }
             let bytes = resp
                 .body()
-                .map_err(|e| solana_core::CoreError::Transport(e.to_string()))?;
+                .map_err(|e| onca_core::CoreError::Transport(e.to_string()))?;
             String::from_utf8(bytes)
-                .map_err(|e| solana_core::CoreError::Transport(e.to_string()))
+                .map_err(|e| onca_core::CoreError::Transport(e.to_string()))
         }
     }
 
