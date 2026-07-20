@@ -1,0 +1,10 @@
+name = "solana-pay-request"
+version = "0.1.0"
+description = "Turn a chat request into a Solana Pay transfer URL + QR payload (USDC/USDT/SOL); enforces operator mint allowlist and max amount"
+author = "cryptoduke01"
+wasm_path = "solana_pay_request.wasm"
+capabilities = ["tool"]
+# config_read: the host injects this plugin's own config section
+# (label, allowed_mints, max_amount) as `__config`. These are ceilings the
+# request cannot widen. No http_client: this tool performs no network I/O.
+permissions = ["config_read"]

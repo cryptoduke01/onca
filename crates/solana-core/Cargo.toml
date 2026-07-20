@@ -1,0 +1,31 @@
+[package]
+name = "solana-core"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "wasm32-wasip2-friendly Solana core for ZeroClaw plugins: base58, JSON-RPC request/response shaping, pubkey, and transaction primitives. Pure Rust — no solana-sdk, no solana-client, no wasm dependency."
+repository = "https://github.com/zeroclaw-labs/zeroclaw-plugins"
+publish = false
+
+# rlib only: this is a library other plugins import via a path dependency. It
+# carries NO wasm or I/O dependency, so it compiles and tests on the host with a
+# plain `cargo test`. Each plugin supplies the actual HTTP transport (waki) and
+# wires it to the `RpcTransport` trait defined here.
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+bs58 = "0.5"
+borsh = "1"
+
+[dev-dependencies]
+serde_json = "1"
+
+[profile.release]
+opt-level = "s"
+lto = true
+
+# Standalone crate: not part of any host workspace. Plugins depend on it by path.
+[workspace]

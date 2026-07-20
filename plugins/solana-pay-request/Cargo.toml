@@ -1,0 +1,27 @@
+[package]
+name = "solana-pay-request"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "ZeroClaw tool plugin (T1): turn a chat request into a Solana Pay transfer URL + QR payload. Zero secrets, human signs."
+publish = false
+
+# cdylib for the wasm component; rlib so the pure `pay` core is host-tested with
+# a plain `cargo test` (no wasm toolchain, no network).
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wit-bindgen = "0.46"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+solana-core = { path = "../../crates/solana-core" }
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
+codegen-units = 1
+
+# Standalone crate: built for wasm32-wasip2, not part of any host workspace.
+[workspace]
