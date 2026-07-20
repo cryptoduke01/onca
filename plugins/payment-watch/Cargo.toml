@@ -1,0 +1,31 @@
+[package]
+name = "payment-watch"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "ZeroClaw tool plugin (T0): watch a Solana Pay reference and confirm an invoice was paid — the right amount, to the right recipient."
+publish = false
+
+# cdylib for the wasm component; rlib so the pure `watch` core is host-tested
+# with a plain `cargo test` against canned RPC fixtures (no wasm, no network).
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wit-bindgen = "0.46"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+solana-core = { path = "../../crates/solana-core" }
+
+# wasi:http client — only compiled for the wasm component, never on the host.
+[target.'cfg(target_family = "wasm")'.dependencies]
+waki = { version = "0.5.1", features = ["json"] }
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
+codegen-units = 1
+
+# Standalone crate: built for wasm32-wasip2, not part of any host workspace.
+[workspace]

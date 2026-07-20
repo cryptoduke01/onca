@@ -1,0 +1,10 @@
+name = "payment-watch"
+version = "0.1.0"
+description = "Watch a Solana Pay reference and confirm an invoice was paid: verifies the on-chain amount to the right recipient (paid/underpaid/pending)"
+author = "cryptoduke01"
+wasm_path = "payment_watch.wasm"
+capabilities = ["tool"]
+# http_client: outbound JSON-RPC to the operator's Solana endpoint (TLS host-side).
+# config_read: read `rpc_url` from this plugin's own config section. The endpoint
+# may embed an API key and is never logged.
+permissions = ["http_client", "config_read"]
