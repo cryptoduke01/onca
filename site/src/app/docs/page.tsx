@@ -8,6 +8,17 @@ export const metadata: Metadata = {
   title: "Docs",
   description:
     "Onca documentation: the custody model and threat model, an install guide, and notes on building Solana tooling for wasm32-wasip2.",
+  openGraph: {
+    title: "Onca Docs",
+    description:
+      "Custody, install, wasm32-wasip2 notes, and per-plugin threat models.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Onca Docs",
+    description:
+      "Custody, install, wasm32-wasip2 notes, and per-plugin threat models.",
+  },
 };
 
 const sections = [

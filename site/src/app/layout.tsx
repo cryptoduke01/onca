@@ -12,22 +12,48 @@ const instrument = Instrument_Sans({
   weight: ["400", "500", "600", "700"],
 });
 
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://cryptoduke01.github.io/onca";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://onca.run";
+
+const title = "Onca · Solana tools for ZeroClaw agents";
+const description =
+  "Onca gives a ZeroClaw agent safe hands on Solana. The agent proposes, a human disposes. Read-only and build-only tools. No spendable keys.";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
-    default: "Onca · Solana tools for ZeroClaw agents",
+    default: title,
     template: "%s · Onca",
   },
-  description:
-    "Onca gives a ZeroClaw agent safe hands on Solana. The agent proposes, a human disposes. Read-only and build-only tools. No spendable keys.",
-  metadataBase: new URL(siteUrl),
+  description,
+  applicationName: "Onca",
+  authors: [{ name: "Duke", url: "https://x.com/dukedotsol" }],
+  creator: "Duke · @dukedotsol",
+  keywords: [
+    "Onca",
+    "ZeroClaw",
+    "Solana",
+    "agent tools",
+    "wasm32-wasip2",
+    "Solana Pay",
+    "custody",
+  ],
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
-    title: "Onca · Solana tools for ZeroClaw agents",
-    description:
-      "Safe Solana tools for ZeroClaw. T0 reads and T1 unsigned builds. No spendable keys.",
     type: "website",
+    locale: "en_US",
+    url: siteUrl,
+    siteName: "Onca",
+    title,
+    description,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    creator: "@dukedotsol",
+    site: "@dukedotsol",
   },
   icons: {
     icon: [
@@ -36,6 +62,10 @@ export const metadata: Metadata = {
       { url: "/icon-32.png", type: "image/png", sizes: "32x32" },
     ],
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 
