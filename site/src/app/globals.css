@@ -1,0 +1,181 @@
+@import "tailwindcss";
+
+/* Runtime theme variables (flipped by html.light) */
+:root {
+  --void: #050506;
+  --surface: #0c0c0e;
+  --surface-2: #121216;
+  --ink: #f5f5f7;
+  --ink-dim: #9a9aa3;
+  --ink-faint: #5c5c66;
+  --signal: #6ea8ff;
+  --signal-deep: #3d6fbf;
+  --ok: #5cb88a;
+  --warn: #d4a85c;
+  --bad: #e06b5c;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.12);
+  --nav: rgba(5, 5, 6, 0.72);
+  --nav-border: rgba(255, 255, 255, 0.08);
+  --card: #f7f7f8;
+  --card-ink: #18181b;
+  --card-muted: #71717a;
+  --card-faint: #a1a1aa;
+  --card-line: rgba(0, 0, 0, 0.07);
+  --card-tab: rgba(0, 0, 0, 0.06);
+  --card-foot: rgba(255, 255, 255, 0.72);
+  --btn: #f5f5f7;
+  --btn-ink: #050506;
+  --btn-hover: #ffffff;
+  --grain-opacity: 0.035;
+  --footer-mark: color-mix(in srgb, #6ea8ff 12%, transparent);
+  --hover-wash: rgba(255, 255, 255, 0.08);
+  --github-pill: rgba(255, 255, 255, 0.07);
+  --github-pill-hover: rgba(255, 255, 255, 0.12);
+  color-scheme: dark;
+}
+
+html.light {
+  --void: #f4f5f7;
+  --surface: #ffffff;
+  --surface-2: #eceef2;
+  --ink: #0c0c0e;
+  --ink-dim: #5c5c66;
+  --ink-faint: #8b8b96;
+  --signal: #3d6fbf;
+  --signal-deep: #2a5299;
+  --ok: #2f8f63;
+  --warn: #b8862d;
+  --bad: #c44a3d;
+  --line: rgba(12, 12, 14, 0.08);
+  --line-strong: rgba(12, 12, 14, 0.12);
+  --nav: rgba(255, 255, 255, 0.82);
+  --nav-border: rgba(12, 12, 14, 0.08);
+  --card: #ffffff;
+  --card-ink: #18181b;
+  --card-muted: #71717a;
+  --card-faint: #a1a1aa;
+  --card-line: rgba(0, 0, 0, 0.08);
+  --card-tab: rgba(0, 0, 0, 0.05);
+  --card-foot: #f0f1f4;
+  --btn: #0c0c0e;
+  --btn-ink: #f5f5f7;
+  --btn-hover: #1a1a1e;
+  --grain-opacity: 0.028;
+  --footer-mark: color-mix(in srgb, #3d6fbf 14%, transparent);
+  --hover-wash: rgba(12, 12, 14, 0.06);
+  --github-pill: rgba(12, 12, 14, 0.05);
+  --github-pill-hover: rgba(12, 12, 14, 0.09);
+  color-scheme: light;
+}
+
+/* Map runtime vars into Tailwind color tokens */
+@theme inline {
+  --color-void: var(--void);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-dim: var(--ink-dim);
+  --color-ink-faint: var(--ink-faint);
+  --color-signal: var(--signal);
+  --color-signal-deep: var(--signal-deep);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-nav: var(--nav);
+  --color-nav-border: var(--nav-border);
+  --color-card: var(--card);
+  --color-card-ink: var(--card-ink);
+  --color-card-muted: var(--card-muted);
+  --color-card-faint: var(--card-faint);
+  --color-card-line: var(--card-line);
+  --color-card-tab: var(--card-tab);
+  --color-card-foot: var(--card-foot);
+  --color-btn: var(--btn);
+  --color-btn-ink: var(--btn-ink);
+  --color-btn-hover: var(--btn-hover);
+
+  --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas,
+    monospace;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--void);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    overflow-x: hidden;
+    transition: background-color 180ms ease, color 180ms ease;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: var(--grain-opacity);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  body > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--signal) 28%, transparent);
+    color: var(--ink);
+  }
+
+  :where(a, button, summary, input, [tabindex]):focus-visible {
+    outline: 2px solid var(--signal);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+}
+
+@layer utilities {
+  .data {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .edge {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink) 6%, transparent);
+  }
+
+  .hover-wash:hover {
+    background-color: var(--hover-wash);
+  }
+
+  .github-pill {
+    background-color: var(--github-pill);
+  }
+  .github-pill:hover {
+    background-color: var(--github-pill-hover);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}
