@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { GitHubIcon } from "@/components/github-icon";
+import { FadeUp } from "@/components/motion";
 import { REPO } from "@/lib/utils";
 
 const X_URL = "https://x.com/dukedotsol";
@@ -15,27 +18,33 @@ const links = [
 ];
 
 /**
- * Sparse footer + oversized wordmark. Builder credit is real: @dukedotsol.
+ * Sparse footer + oversized wordmark.
+ * Credit: "Crafted by Duke" with @dukedotsol as the quiet handle behind the name.
  */
 export function SiteFooter() {
   return (
     <footer className="relative mt-24 overflow-hidden border-t border-line bg-void">
       <div className="mx-auto max-w-5xl px-6 pb-4 pt-16 sm:px-8">
-        <div className="flex flex-col gap-10 sm:flex-row sm:items-start sm:justify-between">
+        <FadeUp className="flex flex-col gap-10 sm:flex-row sm:items-start sm:justify-between">
           <div className="max-w-sm">
             <p className="text-lg font-medium leading-snug tracking-tight text-ink sm:text-xl">
               Solana hands for a self-hosted agent. The agent proposes. You
               dispose.
             </p>
             <p className="mt-4 text-[0.92rem] text-ink-dim">
-              Built by{" "}
+              Crafted by{" "}
               <a
                 href={X_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-ink transition-colors duration-150 hover:text-signal"
+                className="group inline-flex items-baseline gap-1.5 transition-colors duration-200"
               >
-                @dukedotsol
+                <span className="font-medium text-ink group-hover:text-signal">
+                  Duke
+                </span>
+                <span className="data text-[0.78rem] text-ink-faint group-hover:text-ink-dim">
+                  @dukedotsol
+                </span>
               </a>
             </p>
           </div>
@@ -48,16 +57,16 @@ export function SiteFooter() {
               href={REPO}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex min-h-10 min-w-10 items-center justify-center text-ink-dim transition-colors duration-150 hover:text-ink"
+              className="inline-flex min-h-10 min-w-10 items-center justify-center text-ink-dim transition-colors duration-200 hover:text-ink"
               aria-label="Onca on GitHub"
             >
-              <GitHubIcon />
+              <GitHubIcon className="h-[1.15rem] w-[1.15rem]" />
             </a>
             <a
               href={X_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex min-h-10 min-w-10 items-center justify-center text-ink-dim transition-colors duration-150 hover:text-ink"
+              className="inline-flex min-h-10 min-w-10 items-center justify-center text-ink-dim transition-colors duration-200 hover:text-ink"
               aria-label="@dukedotsol on X"
             >
               <svg
@@ -77,7 +86,7 @@ export function SiteFooter() {
                   href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[0.95rem] text-ink-dim transition-colors duration-150 hover:text-ink"
+                  className="text-[0.95rem] text-ink-dim transition-colors duration-200 hover:text-ink"
                 >
                   {link.label}
                 </a>
@@ -85,14 +94,14 @@ export function SiteFooter() {
                 <Link
                   key={link.label}
                   href={link.href}
-                  className="text-[0.95rem] text-ink-dim transition-colors duration-150 hover:text-ink"
+                  className="text-[0.95rem] text-ink-dim transition-colors duration-200 hover:text-ink"
                 >
                   {link.label}
                 </Link>
               )
             )}
           </nav>
-        </div>
+        </FadeUp>
       </div>
 
       <div

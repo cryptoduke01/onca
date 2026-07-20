@@ -1,6 +1,8 @@
 "use client";
 
+import { AnimatePresence } from "motion/react";
 import { useState, type ReactNode } from "react";
+import { easeOut, motion, useReducedMotion } from "@/components/motion";
 import { cn } from "@/lib/utils";
 
 type Tab = "pay" | "risk" | "watch";
@@ -106,6 +108,7 @@ export function AgentCard() {
   const [copied, setCopied] = useState(false);
   const pane = panes[tab];
   const cmd = "cargo build --target wasm32-wasip2 --release";
+  const reduce = useReducedMotion();
 
   async function copy() {
     try {
@@ -153,44 +156,64 @@ export function AgentCard() {
               aria-selected={tab === t.id}
               onClick={() => setTab(t.id)}
               className={cn(
-                "data min-h-9 rounded-md px-3 text-[0.78rem] transition-colors duration-150",
+                "data relative min-h-9 rounded-md px-3 text-[0.78rem] transition-colors duration-200",
                 tab === t.id
-                  ? "bg-card text-card-ink shadow-sm"
+                  ? "text-card-ink"
                   : "text-card-muted hover:text-card-ink"
               )}
             >
-              {t.label}
+              {tab === t.id && !reduce ? (
+                <motion.span
+                  layoutId="agent-tab"
+                  className="absolute inset-0 rounded-md bg-card shadow-sm"
+                  transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                />
+              ) : tab === t.id ? (
+                <span className="absolute inset-0 rounded-md bg-card shadow-sm" />
+              ) : null}
+              <span className="relative z-10">{t.label}</span>
             </button>
           ))}
         </div>
       </div>
 
       <div
-        className="data min-h-[14rem] space-y-3 px-5 py-5 text-left text-[0.9rem] leading-relaxed text-card-ink sm:min-h-[15.5rem] sm:px-6 sm:py-6 sm:text-[0.95rem]"
+        className="data min-h-[14rem] overflow-hidden px-5 py-5 text-left text-[0.9rem] leading-relaxed text-card-ink sm:min-h-[15.5rem] sm:px-6 sm:py-6 sm:text-[0.95rem]"
         role="tabpanel"
       >
-        {pane.lines.map((line, i) => (
-          <p
-            key={i}
-            className={cn(
-              "[overflow-wrap:anywhere]",
-              line.dim && "pl-[3.6rem] text-card-faint",
-              !line.dim && "text-card-ink/90"
-            )}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={tab}
+            className="space-y-3"
+            initial={reduce ? false : { y: 8 }}
+            animate={{ y: 0 }}
+            exit={reduce ? undefined : { y: -6 }}
+            transition={{ duration: 0.22, ease: easeOut }}
           >
-            {line.role ? (
-              <span
+            {pane.lines.map((line, i) => (
+              <p
+                key={i}
                 className={cn(
-                  "inline-block w-[3.6rem] shrink-0",
-                  line.role === "onca" ? "text-card-signal" : "text-card-faint"
+                  "[overflow-wrap:anywhere]",
+                  line.dim && "pl-[3.6rem] text-card-faint",
+                  !line.dim && "text-card-ink/90"
                 )}
               >
-                {line.role}
-              </span>
-            ) : null}
-            {line.text}
-          </p>
-        ))}
+                {line.role ? (
+                  <span
+                    className={cn(
+                      "inline-block w-[3.6rem] shrink-0",
+                      line.role === "onca" ? "text-card-signal" : "text-card-faint"
+                    )}
+                  >
+                    {line.role}
+                  </span>
+                ) : null}
+                {line.text}
+              </p>
+            ))}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       <div className="flex items-center gap-3 border-t border-card-line bg-card-foot px-4 py-3 pl-5 sm:px-5">
@@ -201,7 +224,7 @@ export function AgentCard() {
           type="button"
           onClick={copy}
           className={cn(
-            "data min-h-10 shrink-0 rounded-lg px-4 text-[0.78rem] transition-colors duration-150",
+            "data min-h-10 shrink-0 rounded-lg px-4 text-[0.78rem] transition-colors duration-200",
             "bg-card-ink text-white hover:opacity-90",
             copied && "bg-card-signal text-white hover:opacity-100"
           )}
