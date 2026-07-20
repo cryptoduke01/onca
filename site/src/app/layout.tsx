@@ -18,6 +18,15 @@ const title = "Onca · Solana tools for ZeroClaw agents";
 const description =
   "Onca gives a ZeroClaw agent safe hands on Solana. The agent proposes, a human disposes. Read-only and build-only tools. No spendable keys.";
 
+/** Real PNG in /public — crawlers need .png + image/png (not extensionless routes). */
+const ogImage = {
+  url: "/og.png",
+  width: 1200,
+  height: 630,
+  alt: "Onca — the agent proposes, you dispose.",
+  type: "image/png" as const,
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
@@ -47,6 +56,7 @@ export const metadata: Metadata = {
     siteName: "Onca",
     title,
     description,
+    images: [ogImage],
   },
   twitter: {
     card: "summary_large_image",
@@ -54,6 +64,7 @@ export const metadata: Metadata = {
     description,
     creator: "@dukedotsol",
     site: "@dukedotsol",
+    images: [ogImage],
   },
   icons: {
     icon: [
