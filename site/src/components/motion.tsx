@@ -3,7 +3,6 @@
 import {
   motion,
   useReducedMotion,
-  type HTMLMotionProps,
   type Variants,
 } from "motion/react";
 import type { ReactNode } from "react";
@@ -13,42 +12,34 @@ export const easeOut = [0.16, 1, 0.3, 1] as const;
 
 /**
  * Entrance that never hides content: only a small Y settle.
+ * Always a motion.div (no polymorphic tag) so props stay type-safe.
  * If reduced motion is on, children render as a plain div.
  */
 export function FadeUp({
   children,
   className,
   delay = 0,
-  as: Tag = "div",
-  ...rest
 }: {
   children: ReactNode;
   className?: string;
   delay?: number;
-  as?: "div" | "section" | "li" | "header" | "footer";
-} & Omit<HTMLMotionProps<"div">, "children" | "className">) {
+}) {
   const reduce = useReducedMotion();
-  // motion[Tag] is a union of motion components; the shared animated props
-  // (y, whileInView, …) are common to every HTML element, so pin the type to
-  // one concrete component to keep the spread props assignable.
-  const Comp = motion[Tag] as typeof motion.div;
 
   if (reduce) {
-    const Static = Tag;
-    return <Static className={className}>{children}</Static>;
+    return <div className={className}>{children}</div>;
   }
 
   return (
-    <Comp
+    <motion.div
       className={className}
       initial={{ y: 14 }}
       whileInView={{ y: 0 }}
       viewport={{ once: true, margin: "-8% 0px" }}
       transition={{ duration: 0.55, delay, ease: easeOut }}
-      {...rest}
     >
       {children}
-    </Comp>
+    </motion.div>
   );
 }
 

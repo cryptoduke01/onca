@@ -89,16 +89,16 @@ export default function HomePage() {
         </div>
       </section>
 
-      <FadeUp as="div" delay={0.02}>
+      <FadeUp delay={0.02}>
         <CustodySection />
       </FadeUp>
-      <FadeUp as="div" delay={0.04}>
+      <FadeUp delay={0.04}>
         <ToolsSection />
       </FadeUp>
-      <FadeUp as="div" delay={0.04}>
+      <FadeUp delay={0.04}>
         <ProofSection />
       </FadeUp>
-      <FadeUp as="div" delay={0.04}>
+      <FadeUp delay={0.04}>
         <InstallSection />
       </FadeUp>
     </main>
