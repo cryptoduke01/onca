@@ -106,13 +106,22 @@ onca  solana:7xKX…?amount=25
       from 9WzD…AWWM
       tx 5Q54…ge4j`,
     },
+    {
+      name: "depin-attest",
+      tier: "T1",
+      body: "Turns a sensor reading into an unsigned attestation transaction with a monotonic replay guard. A ZeroClaw device becomes a Solana-reporting node.",
+      sample: `esp32  bme280-a → 23.4°C
+onca   Attestation #42
+       seq must increase`,
+      reverse: true,
+    },
   ];
 
   return (
     <section id="tools" className="scroll-mt-28 py-24 sm:py-28">
       <div className="mx-auto max-w-5xl px-6 sm:px-8">
         <h2 className="max-w-xl text-[clamp(1.85rem,4vw,2.85rem)] font-semibold leading-[1.08] tracking-tight text-ink">
-          Ask. Confirm.
+          Ask. Confirm. Report.
           <br />
           <span className="text-ink-dim">Stay out of traps.</span>
         </h2>
@@ -142,7 +151,7 @@ onca  solana:7xKX…?amount=25
         </div>
 
         <p className="mt-10 max-w-2xl text-[1.02rem] text-ink-dim">
-          All three sit on{" "}
+          All four sit on{" "}
           <a
             href={`${REPO}/tree/main/crates/onca-core`}
             target="_blank"
@@ -151,8 +160,9 @@ onca  solana:7xKX…?amount=25
           >
             onca-core
           </a>
-          : a wasm-friendly Solana library with no solana-sdk, no I/O, and a
-          mockable transport under cargo test.
+          : a wasm-friendly Solana library with no solana-sdk, no I/O,
+          hand-rolled transaction assembly with durable nonce, and a mockable
+          transport under cargo test.
         </p>
       </div>
     </section>

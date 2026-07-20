@@ -5,7 +5,7 @@ import { useState, type ReactNode } from "react";
 import { easeOut, motion, useReducedMotion } from "@/components/motion";
 import { cn } from "@/lib/utils";
 
-type Tab = "pay" | "risk" | "watch";
+type Tab = "pay" | "risk" | "watch" | "attest";
 
 const panes: Record<
   Tab,
@@ -91,12 +91,38 @@ const panes: Record<
       },
     ],
   },
+  attest: {
+    title: "Sensor attest",
+    subtitle: "depin-attest · T1",
+    lines: [
+      { role: "esp32", text: "bme280-a → 23.4°C, seq 42" },
+      {
+        role: "onca",
+        text: (
+          <>
+            Attestation · <strong className="font-semibold text-card-ink">#42</strong> — unsigned tx ready to sign
+          </>
+        ),
+      },
+      {
+        role: "",
+        text: "onca:attest s=bme280-a v=23.4 u=C seq=42",
+        dim: true,
+      },
+      {
+        role: "",
+        text: "replay guard: seq must increase · the device signs",
+        dim: true,
+      },
+    ],
+  },
 };
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "pay", label: "pay" },
   { id: "risk", label: "risk" },
   { id: "watch", label: "watch" },
+  { id: "attest", label: "attest" },
 ];
 
 /**

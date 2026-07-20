@@ -20,6 +20,7 @@ const plugins = [
   { name: "solana-pay-request", tier: "T1 · build", href: `${REPO}/tree/main/plugins/solana-pay-request` },
   { name: "token-risk-check", tier: "T0 · read", href: `${REPO}/tree/main/plugins/token-risk-check` },
   { name: "payment-watch", tier: "T0 · read", href: `${REPO}/tree/main/plugins/payment-watch` },
+  { name: "depin-attest", tier: "T1 · build", href: `${REPO}/tree/main/plugins/depin-attest` },
   { name: "onca-core", tier: "core", href: `${REPO}/tree/main/crates/onca-core` },
 ];
 
