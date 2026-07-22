@@ -1,0 +1,5 @@
+[boot] esp32 dht11 node online, wifi rssi -61
+onca:reading s=dht11-a v=23.4 u=C seq=42 t=1753000000
+onca:reading s=dht11-a v=23.4 u=C seq=42 t=1753000300
+onca:reading s=dht11-a v=999 u=C seq=43 t=1753000600
+onca:reading s=dht11-a v=24.1 u=C seq=44 t=1753000900
