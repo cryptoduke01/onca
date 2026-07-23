@@ -3,7 +3,7 @@ name = "onca-core"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-description = "wasm32-wasip2-friendly Solana core for ZeroClaw plugins: base58, pubkey, JSON-RPC request/response shaping, and amount math. Pure Rust — no solana-sdk, no solana-client, no wasm dependency."
+description = "Minimal wasm32-wasip2 Solana core for ZeroClaw plugins: base58, pubkey, JSON-RPC over a transport trait, amount shaping, and dependency-light transaction assembly (memo, durable nonce) verified on devnet."
 repository = "https://github.com/zeroclaw-labs/zeroclaw-plugins"
 publish = false
 

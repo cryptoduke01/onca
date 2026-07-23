@@ -1,23 +1,30 @@
 # Notes on wasm32-wasip2
 
-The hard part of this project was not the Solana logic. The hard part was to
-compile anything Solana-shaped into a WIT component. These notes record what
-cost time, so the next person spends the time on something else.
+These notes record what actually cost time building a Solana plugin as a WIT
+component, so the next person spends their time elsewhere. The headline, updated:
+the dependency wall people warned about turned out to be a door.
 
-## solana-sdk and solana-client do not belong here
+## The modular Solana crates compile — we still kept the core tiny
 
-`solana-sdk` and `solana-client` expect a full operating system. They need
-sockets, threads, `getrandom`, a socket RPC client, and a long list of other
-crates that expect the same. A `wasm32-wasip2` component does not provide these.
-Even where you can force a dependency to build, it makes the component much
-larger than a host wants to load.
+The old lore was that `solana-sdk` drags in sockets, threads, `getrandom`, and a
+socket RPC client, so nothing Solana-shaped fits a `wasm32-wasip2` component. As
+of mid-2026 that is no longer true: the modular crates (`solana-pubkey`,
+`solana-instruction`, `solana-message`, `solana-transaction`, `solana-hash`),
+plus `borsh` and `bs58`, compile clean for the target, and even `solana-sdk`
+itself builds. The real risk has moved to the component boundary — wit-bindgen
+integration and the host's narrower WASI capability grants — not the compiler.
 
-So the suite does not use them. `onca-core` writes the small surface that the
-plugins need. It parses an address, builds and reads a JSON-RPC message, and does
-amount math. It uses only `serde`, `serde_json`, and `bs58`. All three are pure
-Rust and build for the target with no special work. A Solana address is 32 bytes
-and base58. A JSON-RPC call is a POST with a known shape. Neither one needs the
-full SDK.
+`onca-core` still writes its own small surface (base58, pubkey, a JSON-RPC
+message over a transport trait, amount math, and hand-assembled transactions). We
+kept it hand-rolled for two deliberate reasons, not because we were forced to.
+One, size: a component carrying only `serde`, `serde_json`, and `bs58` stays
+small, and the host precompiles every component it loads. Two, proof: we
+exercised the encoding against the real runtime (see below), which the modular
+crates have not yet been through *as an instantiated component* inside the
+ZeroClaw host. Wrapping the modular crates is a clean, more idiomatic future
+direction; the hand-rolled path buys minimal size and a runtime-verified result
+today. Either way the RPC transport is `waki` (blocking `wasi:http`) plus
+`serde_json`, never `solana-client`.
 
 ## Keep HTTP out of the core
 

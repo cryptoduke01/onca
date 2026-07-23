@@ -57,21 +57,27 @@ holds a key that can spend.
 
 ## The core
 
-`solana-sdk` and `solana-client` are the usual way to use Solana from Rust.
-Neither one builds cleanly for `wasm32-wasip2` inside a WIT component. Both need
-sockets, threads, and a full operating system. A sandboxed plugin does not have
-these. To solve the problem one time, the Solana code lives in one place:
-[`onca-core`](crates/onca-core).
+The usual way to touch Solana from Rust is `solana-sdk`. As of mid-2026 the
+modular Solana crates (`solana-pubkey`, `solana-instruction`, `solana-message`,
+`solana-transaction`, `solana-hash`) — and `solana-sdk` itself — compile cleanly
+for `wasm32-wasip2`, so a plugin no longer *has* to hand-roll anything to build a
+transaction. `onca-core` still assembles transactions by hand, on purpose: a
+minimal component with the fewest dependencies, and an encoding proven against
+the real runtime rather than only against a library the ZeroClaw host has not yet
+instantiated as a component.
 
-The core is a plain library. It has no wasm dependency and it does no input or
-output. It parses an address, builds a JSON-RPC request, reads the response,
-converts base units to human amounts, and assembles Solana transactions by hand
-— the compact-u16 prefix, the legacy message layout, base64, the SPL Memo
-instruction, and the durable-nonce advance that lets an approval-gated
-transaction survive the wait for a human to sign (the bounty's blockhash-expiry
-trap). The transaction code is tested against RFC 4648 and the documented
-compact-u16 vectors. The one thing the core does not do is make the HTTP call. A
-trait does that:
+That proof is the point. `cargo run --example memo_tx` emits an unsigned
+transaction; devnet `simulateTransaction` deserializes it, recognizes the fee
+payer as signer, and runs the SPL Memo program. The bytes are correct at the
+wire, not only in unit tests (which also check RFC 4648 base64 and the documented
+compact-u16 vectors). The core is a plain library with no input or output: it
+parses an address, builds a JSON-RPC request, reads the response, shapes amounts,
+and assembles the legacy message, the SPL Memo instruction, and the durable-nonce
+advance that keeps an approval-gated transaction valid while a human takes their
+time to sign (the bounty's blockhash-expiry trap). Wrapping the modular crates
+instead is a reasonable future direction; hand-rolling buys minimal size and a
+runtime-verified path today. The one thing the core does not do is make the HTTP
+call. A trait does that:
 
 ```rust
 pub trait RpcTransport {
@@ -129,15 +135,19 @@ cargo build --target wasm32-wasip2 --release
 
 ## Status
 
-The core and all three plugins are complete. Each plugin has a pure core, a wasm
-component that builds clean, host tests with a fail-closed prompt-injection
-case, a manifest with the fewest permissions, and a README with a threat model.
-The suite has 47 host tests.
+The core and all four plugins are complete: each has a pure Rust core, a wasm
+component that builds clean for `wasm32-wasip2`, host tests with a fail-closed
+prompt-injection case, a manifest with the fewest permissions, and a README with
+a threat model.
 
-Two items remain. The first is a short demo of a live ZeroClaw agent on Telegram
-that runs the full loop. The second is a stretch goal: versioned-transaction and
-durable-nonce support in `onca-core`, so the suite can add a signed-transfer
-builder and keep the same custody rules.
+The tools are the means, not the submission. The submission is a running use
+case: a self-hosted ZeroClaw agent on a real channel, running the DePIN
+attestation loop end to end. An ESP32 reads a sensor, the agent proposes an
+on-chain attestation through `depin-attest` behind a human approval checkpoint,
+and a person or a Squads multisig signs it. That agent, its config and SOPs, a
+three-minute video, and a reproducible write-up are the work in progress. The
+plugins run inside a source-built host (`--features plugins-wasm-cranelift`),
+where the component boundary is exercised for real, not just under host tests.
 
 ## License
 
