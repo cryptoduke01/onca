@@ -90,10 +90,11 @@ mod component {
         }
 
         fn description() -> String {
-            "Record a hardware sensor reading on Solana as a signed attestation. Given a sensor \
-             id, a numeric reading, a unit, and a monotonic sequence number, it returns an \
-             unsigned transaction (base64) that writes the reading on-chain as a memo, for the \
-             host or a person to sign. It never moves funds and holds no key. A replay guard \
+            "Record a hardware sensor reading on Solana as a signed attestation. Call this \
+             exactly once per reading. Given a sensor id, a numeric reading, a unit, and a \
+             monotonic sequence number, it returns an unsigned transaction (base64) that writes \
+             the reading on-chain as a memo, for the host or a person to sign. Leave timestamp \
+             unset; the host stamps it. It never moves funds and holds no key. A replay guard \
              (the sequence must increase) and operator-set reading bounds are enforced and cannot \
              be overridden by the request."
                 .to_string()
@@ -107,7 +108,7 @@ mod component {
                     "reading": { "type": "number", "description": "The numeric reading." },
                     "unit": { "type": "string", "description": "Unit, e.g. \"C\", \"%\", \"ppm\"." },
                     "seq": { "type": "integer", "description": "Monotonic sequence number; must exceed the last attested." },
-                    "timestamp": { "type": "integer", "description": "Unix seconds of the reading." }
+                    "timestamp": { "type": "integer", "description": "Optional. Leave this unset — the host stamps the reading time. Never invent a value." }
                 },
                 "required": ["sensor", "reading", "seq"]
             })
@@ -132,12 +133,23 @@ mod component {
             };
 
             let cfg = AttestConfig::from_section(&parsed.config);
+            // The reading's time is stamped by the host, never invented by the
+            // model. If the caller leaves `timestamp` unset (0), fill it with the
+            // host wall clock here in the shim (the pure core stays clock-free).
+            let timestamp = if parsed.timestamp == 0 {
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs())
+                    .unwrap_or(0)
+            } else {
+                parsed.timestamp
+            };
             let attest_args = AttestArgs {
                 sensor: parsed.sensor,
                 reading: parsed.reading,
                 unit: parsed.unit,
                 seq: parsed.seq,
-                timestamp: parsed.timestamp,
+                timestamp,
             };
 
             emit(PluginAction::Invoke, PluginOutcome::Success, "building attestation");
