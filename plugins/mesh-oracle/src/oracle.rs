@@ -116,17 +116,21 @@ pub fn read_oracle<T: RpcTransport>(
     let client = RpcClient::new(rpc_url, transport);
     let mut readings = Vec::new();
     for device in &cfg.devices {
-        for attempt in 0..3 {
-            let res = client
-                .call("getSignaturesForAddress", json!([device, {"limit": 25}]))
-                .map_err(|e| format!("mesh read failed for {device}: {e}"))?;
+        // Each node's read is fault-tolerant: a transient wasi:http error or an
+        // empty answer just retries, and a node that never answers is dropped —
+        // one flaky node must never fail the whole oracle. Quorum guards the
+        // settlement against too many nodes going dark.
+        for _ in 0..4 {
+            let Ok(res) = client.call("getSignaturesForAddress", json!([device, {"limit": 25}])) else {
+                continue; // transient RPC error — retry this node
+            };
             let sigs = res.as_array().cloned().unwrap_or_default();
             if let Some((value, seq, timestamp)) = pick_reading(&sigs, &sensor) {
                 readings.push(NodeReading { device: device.clone(), value, seq, timestamp });
                 break;
             }
-            if !sigs.is_empty() || attempt == 2 {
-                break;
+            if !sigs.is_empty() {
+                break; // a real answer, just no matching attestation
             }
         }
     }
