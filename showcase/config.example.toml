@@ -1,0 +1,49 @@
+# Onca — reproducible ZeroClaw config for the DePIN attestation use case.
+#
+# This is the whole agent: a Telegram bot that turns a sensor reading into an
+# unsigned Solana attestation behind a human approval gate. No secrets live in
+# this file. Copy it to ~/.zeroclaw/config.toml, fill in <DEVICE_PUBKEY>, and
+# inject the two secrets via environment variables at launch (see SETUP.md).
+
+schema_version = 3
+
+# ── The plugin: depin-attest (Tier 3, custody T1 — builds unsigned, holds no key)
+[plugins]
+enabled = true
+
+[[plugins.entries]]
+name = "depin-attest"
+
+[plugins.entries.config]
+# The device that signs the attestation off-agent. `solana-keygen pubkey ~/.onca/device.json`
+device = "<DEVICE_PUBKEY>"
+rpc_url = "https://api.devnet.solana.com"
+# Operator bounds the model and the sensor cannot argue past (fail-closed).
+min_reading = "-40"
+max_reading = "85"
+min_seq = "0"
+
+# ── The model. api_key is injected via
+#    ZEROCLAW_providers__models__groq__default__api_key
+[providers.models.groq.default]
+model = "llama-3.3-70b-versatile"
+
+# ── The agent, bound to the Telegram channel.
+[agents.onca]
+model_provider = "groq.default"
+risk_profile = "onca"
+channels = ["telegram.main"]
+
+# ── Custody: supervised autonomy + forced approval on every attestation.
+[risk_profiles.onca]
+level = "supervised"
+# Least privilege: the agent sees only this one tool. Also keeps each request
+# under Groq's free-tier token-per-minute limit (bounty trap #3: don't flood context).
+allowed_tools = ["depin_attest"]
+# Every depin_attest call pauses for a human tap-to-approve in Telegram.
+always_ask = ["depin_attest"]
+
+# ── The channel. bot_token is injected via
+#    ZEROCLAW_channels__telegram__main__bot_token
+[channels.telegram.main]
+enabled = true

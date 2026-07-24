@@ -91,12 +91,15 @@ mod component {
 
         fn description() -> String {
             "Record a hardware sensor reading on Solana as a signed attestation. Call this \
-             exactly once per reading. Given a sensor id, a numeric reading, a unit, and a \
-             monotonic sequence number, it returns an unsigned transaction (base64) that writes \
-             the reading on-chain as a memo, for the host or a person to sign. Leave timestamp \
-             unset; the host stamps it. It never moves funds and holds no key. A replay guard \
-             (the sequence must increase) and operator-set reading bounds are enforced and cannot \
-             be overridden by the request."
+             exactly once per reading, with the EXACT value you were given. This is an oracle: \
+             never round, adjust, substitute, or invent a reading. If the tool refuses a reading \
+             (out of the operator's bounds, or a replayed sequence), report that refusal to the \
+             user verbatim and STOP — do not retry with a different value. Given a sensor id, a \
+             numeric reading, a unit, and a monotonic sequence number, it returns an unsigned \
+             transaction (base64) that writes the reading on-chain as a memo, for the host or a \
+             person to sign. Leave timestamp unset; the host stamps it. It never moves funds and \
+             holds no key. A replay guard (the sequence must increase) and operator-set reading \
+             bounds are enforced in code and cannot be overridden by the request."
                 .to_string()
         }
 
