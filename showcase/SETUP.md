@@ -89,6 +89,23 @@ tools/onca-signer/target/release/onca-signer \
 That is the full loop: chat → human approval → unsigned attestation → the human's
 signer lands it on Solana. The key never touches the agent.
 
+## 7. The mesh oracle (read side)
+
+One node is not an oracle. Stand up several nodes (each is a keypair +
+`onca-signer --keypair <path>` attesting its own reading), then aggregate them
+into one manipulation-resistant value with `onca-oracle` (custody T0, read-only):
+
+```bash
+cargo build --release --manifest-path tools/onca-oracle/Cargo.toml
+tools/onca-oracle/target/release/onca-oracle \
+  --devices "<pubkey1>,<pubkey2>,<pubkey3>,<pubkey4>" \
+  --sensor dht11-a --tolerance 5 --quorum 3
+```
+
+It reads each device's latest on-chain attestation, drops outliers (a lying or
+broken node), and prints the median the market settles on. A single corrupted
+node cannot move it.
+
 ## Hardware (optional)
 
 An ESP32 + DHT11 running [`firmware/onca-dht11`](../plugins/depin-attest/firmware/onca-dht11)

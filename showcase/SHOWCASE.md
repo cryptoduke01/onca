@@ -1,8 +1,9 @@
 # Onca — human-approved sensor attestations on Solana
 
-**A self-hosted ZeroClaw agent that turns a sensor reading into an unsigned
-Solana attestation behind a human tap-to-approve, then a separate signer lands it
-on-chain. The agent never holds a key.**
+**A manipulation-resistant oracle for prediction markets. Independent DePIN nodes
+each attest their sensor readings on Solana under a human tap-to-approve; a mesh
+aggregates them into one value a market can settle on, and no minority of lying
+nodes can move it. The agent never holds a key.**
 
 Builder: [@dukedotsol](https://x.com/dukedotsol) · Code:
 [github.com/cryptoduke01/onca](https://github.com/cryptoduke01/onca) ·
@@ -18,6 +19,11 @@ memo. A separate tool, `onca-signer`, holds the device key the agent never sees;
 a human runs it to sign and submit. The result is a tamper-evident record on
 Solana that a specific device reported a specific value at a specific time, with
 a monotonic sequence so an old reading can never be replayed as fresh.
+
+That is one node. The oracle is the **mesh**: `onca-oracle` reads many independent
+nodes' attestations back off-chain and settles on the median, dropping outliers,
+so a lying or broken minority is ignored. That single aggregated value is what a
+prediction market consumes.
 
 ## Who it's for
 
@@ -38,6 +44,20 @@ Solana devnet:
 - [`onca:attest s=dht11-a v=22.8 u=C seq=3`](https://explorer.solana.com/tx/4zcKbaX8WrPr4vEVWsmFYZ84wyEeiuE1HvpwskWbUM2X6FsTe3Yd1cShuPutPKt2ujgwy1HR6JR1nkeUyNJA3QEN?cluster=devnet)
 
 Device: `BMpwFSKbLJvPpK4yo5EoqBiQUDxt9NdgFRToXJpiphrC`
+
+**The oracle rejects a lying node — live on devnet.** A 4-node mesh, each device
+attesting independently; node 4 is an adversary reporting 999°C. `onca-oracle`
+reads all four on-chain and settles on the honest median, dropping the liar:
+
+```
+node 3xQ3…  23.4      node Ghri…  23.6
+node AxRK…  23.1      node BtpD…  999   ← rejected as outlier
+ORACLE VALUE: 23.4 C  (3 of 4 nodes agree)
+```
+
+Corrupting one node changes nothing — that is the property a prediction market
+needs to settle on real-world data, and the reason this is an oracle and not just
+a sensor.
 
 ## ZeroClaw features used
 
@@ -60,6 +80,10 @@ Device: `BMpwFSKbLJvPpK4yo5EoqBiQUDxt9NdgFRToXJpiphrC`
   attestation, with code-enforced reading bounds and a monotonic replay guard.
 - **`onca-signer`** — the "human disposes" side: holds the device key, rebuilds
   the same attestation with `onca-core`, signs (ed25519), submits.
+- **`onca-core::mesh` + `onca-oracle`** (custody T0) — the oracle read side:
+  aggregate many nodes' on-chain attestations into one value (median, outliers
+  dropped, quorum required), so a lying minority cannot move the settlement.
+  Five host tests, including "one lying node cannot move the settlement".
 - **ESP32 firmware + serial bridge** — a DHT11 node that prints `onca:reading`
   lines the pipeline ingests (the software loop runs identically with a typed
   reading, so the demo doesn't depend on hardware).
@@ -104,9 +128,9 @@ Plugin source: [`plugins/depin-attest`](../plugins/depin-attest); engine:
 
 ## Roadmap
 
-- **Sensor mesh + median** so no single node can move the number — the
-  manipulation-resistant oracle a weather prediction market actually needs.
-- **Live ESP32** swapped in for the typed reading (firmware + bridge already
-  written).
+- **Live ESP32** as a real physical node in the mesh (firmware + bridge already
+  written), swapped in for a simulated node.
+- **Geographic, staked mesh** — independent operators run nodes, stake, and earn;
+  reputation weights the aggregate and a proven liar is slashed.
 - **Squads multisig dispose** — the agent proposes, a multisig approves from a
   phone, replacing the single-key signer.
