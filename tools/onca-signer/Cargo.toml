@@ -1,0 +1,24 @@
+[package]
+name = "onca-signer"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "The 'human disposes' side of Onca: sign an approved depin-attest attestation with the device key and submit it to Solana. Never runs inside the agent."
+publish = false
+
+[[bin]]
+name = "onca-signer"
+path = "src/main.rs"
+
+# Host-only tool. It holds the device key the agent never sees, and reuses
+# onca-core's transaction engine to build the *same* attestation the agent
+# proposed, then signs and submits it. This is the T1 custody boundary made real:
+# the agent builds unsigned, a human runs this.
+[dependencies]
+onca-core = { path = "../../crates/onca-core" }
+ed25519-dalek = "2"
+bs58 = "0.5"
+ureq = { version = "2", features = ["json"] }
+serde_json = "1"
+
+[workspace]
