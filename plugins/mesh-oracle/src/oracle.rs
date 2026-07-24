@@ -78,29 +78,19 @@ fn fmt(v: f64) -> String {
 
 /// One node's latest attested reading for `sensor`, read from its signature
 /// history. The memo may carry a `[len] ` prefix, so we scan to `onca:attest`.
-fn latest_reading<T: RpcTransport>(
-    client: &RpcClient<T>,
-    device: &str,
-    sensor: &str,
-) -> Result<Option<NodeReading>, String> {
-    // One call per node. Public devnet RPC rate-limits bursts, so a busy mesh
-    // wants a real endpoint (Helius/Triton/QuickNode) in `rpc_url` — operators
-    // run their own anyway. An empty/rate-limited answer just drops that node;
-    // quorum protects the settlement.
-    let res = client
-        .call("getSignaturesForAddress", json!([device, {"limit": 25}]))
-        .map_err(|e| e.to_string())?;
-    let Some(entries) = res.as_array() else { return Ok(None) };
-    for entry in entries {
+/// From a device's `getSignaturesForAddress` result (newest-first), the latest
+/// reading for `sensor`, if any. The memo may carry a `[len] ` prefix.
+fn pick_reading(sigs: &[Value], sensor: &str) -> Option<(f64, u64, u64)> {
+    for entry in sigs {
         let memo = entry.get("memo").and_then(Value::as_str).unwrap_or("");
         let Some(start) = memo.find("onca:attest") else { continue };
         if let Some((s, value, seq, timestamp)) = parse_attest(&memo[start..]) {
             if s == sensor {
-                return Ok(Some(NodeReading { device: device.to_string(), value, seq, timestamp }));
+                return Some((value, seq, timestamp));
             }
         }
     }
-    Ok(None)
+    None
 }
 
 /// Read the mesh and settle. `sensor_override` (from the request) may pick a
@@ -119,13 +109,25 @@ pub fn read_oracle<T: RpcTransport>(
         .unwrap_or(&cfg.sensor)
         .to_string();
 
+    // One getSignaturesForAddress per node (Helius free tier rejects JSON-RPC
+    // batch). A couple of retries cover an occasional empty wasi:http response;
+    // a real endpoint like Helius answers each single call reliably (200). A
+    // node that stays unreachable is simply dropped — quorum guards settlement.
     let client = RpcClient::new(rpc_url, transport);
     let mut readings = Vec::new();
     for device in &cfg.devices {
-        match latest_reading(&client, device, &sensor) {
-            Ok(Some(r)) => readings.push(r),
-            Ok(None) => {}
-            Err(e) => return Err(format!("mesh read failed for {device}: {e}")),
+        for attempt in 0..3 {
+            let res = client
+                .call("getSignaturesForAddress", json!([device, {"limit": 25}]))
+                .map_err(|e| format!("mesh read failed for {device}: {e}"))?;
+            let sigs = res.as_array().cloned().unwrap_or_default();
+            if let Some((value, seq, timestamp)) = pick_reading(&sigs, &sensor) {
+                readings.push(NodeReading { device: device.clone(), value, seq, timestamp });
+                break;
+            }
+            if !sigs.is_empty() || attempt == 2 {
+                break;
+            }
         }
     }
     let agg = aggregate(&readings, cfg.tolerance, cfg.quorum);
@@ -140,17 +142,31 @@ mod tests {
     struct MockRpc {
         memos: HashMap<String, String>,
     }
-    impl RpcTransport for MockRpc {
-        fn post_json(&self, _url: &str, body: &str) -> onca_core::Result<String> {
-            let req: Value = serde_json::from_str(body).unwrap();
-            let device = req["params"][0].as_str().unwrap_or("");
+    impl MockRpc {
+        fn one(&self, device: &str, id: u64) -> Value {
             let memo = self.memos.get(device).cloned().unwrap_or_default();
             let result = if memo.is_empty() {
                 json!([])
             } else {
                 json!([{"signature": "sig", "memo": memo, "err": null}])
             };
-            Ok(json!({"jsonrpc": "2.0", "id": 1, "result": result}).to_string())
+            json!({"jsonrpc": "2.0", "id": id, "result": result})
+        }
+    }
+    impl RpcTransport for MockRpc {
+        fn post_json(&self, _url: &str, body: &str) -> onca_core::Result<String> {
+            let req: Value = serde_json::from_str(body).unwrap();
+            // The oracle sends a JSON-RPC batch (array); answer each element by id.
+            if let Some(arr) = req.as_array() {
+                let out: Vec<Value> = arr
+                    .iter()
+                    .map(|r| self.one(r["params"][0].as_str().unwrap_or(""), r["id"].as_u64().unwrap_or(0)))
+                    .collect();
+                Ok(Value::Array(out).to_string())
+            } else {
+                let device = req["params"][0].as_str().unwrap_or("");
+                Ok(self.one(device, req["id"].as_u64().unwrap_or(0)).to_string())
+            }
         }
     }
 
