@@ -1,0 +1,9 @@
+name = "mesh-oracle"
+version = "0.1.0"
+description = "Read the mesh of on-chain device attestations and return the manipulation-resistant aggregate (median, outliers dropped) a prediction market settles on"
+author = "cryptoduke01"
+wasm_path = "mesh_oracle.wasm"
+capabilities = ["tool"]
+# http_client: read each mesh node's signature history from the operator's RPC.
+# config_read: read the mesh `devices`, `sensor`, `tolerance`, `quorum`, `rpc_url`.
+permissions = ["http_client", "config_read"]
