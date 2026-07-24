@@ -48,7 +48,8 @@ fn arg(flag: &str, default: &str) -> String {
 
 fn main() {
     // ── device key (the thing the agent must never hold) ──
-    let keyfile = format!("{}/.onca/device.json", env::var("HOME").unwrap());
+    let default_key = format!("{}/.onca/device.json", env::var("HOME").unwrap());
+    let keyfile = arg("--keypair", &default_key);
     let raw = fs::read_to_string(&keyfile).unwrap_or_else(|_| {
         eprintln!("no device key at {keyfile}\n  create: solana-keygen new -o {keyfile}");
         std::process::exit(1);

@@ -1,0 +1,21 @@
+[package]
+name = "onca-oracle"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Oracle read-side: read a mesh of on-chain device attestations and aggregate them into one manipulation-resistant value (median, outliers dropped)."
+publish = false
+
+[[bin]]
+name = "onca-oracle"
+path = "src/main.rs"
+
+# Custody T0 (read only). Reads each device's attestation memos off-chain via
+# getSignaturesForAddress and settles on onca-core's mesh aggregate. This is the
+# value a prediction market consumes; a lying minority of nodes cannot move it.
+[dependencies]
+onca-core = { path = "../../crates/onca-core" }
+ureq = { version = "2", features = ["json"] }
+serde_json = "1"
+
+[workspace]
