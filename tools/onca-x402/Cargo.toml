@@ -1,0 +1,24 @@
+[package]
+name = "onca-x402"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Sell the mesh oracle behind an x402 paywall: an agent or a market's resolver pays a micro-fee on Solana to read the trusted, manipulation-resistant value."
+publish = false
+
+[[bin]]
+name = "onca-x402"
+path = "src/main.rs"
+
+# Machine commerce (x402): the read side of the oracle, priced. A caller hits
+# /oracle, gets a 402 with a price, pays on Solana, retries with X-PAYMENT, and
+# the server verifies the payment landed on-chain before returning the mesh
+# value. Reuses onca-core's mesh aggregation and the same
+# getSignaturesForAddress / getTransaction reads the plugins use.
+[dependencies]
+onca-core = { path = "../../crates/onca-core" }
+ureq = { version = "2", features = ["json"] }
+serde_json = "1"
+tiny_http = "0.12"
+
+[workspace]
