@@ -41,7 +41,7 @@ const B64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz012
 
 /// Standard, padded base64. Used to return an unsigned transaction as text.
 pub fn base64(input: &[u8]) -> String {
-    let mut out = String::with_capacity((input.len() + 2) / 3 * 4);
+    let mut out = String::with_capacity(input.len().div_ceil(3) * 4);
     for chunk in input.chunks(3) {
         let b0 = chunk[0] as u32;
         let b1 = *chunk.get(1).unwrap_or(&0) as u32;
@@ -206,7 +206,7 @@ pub fn unsigned_transaction_base64(msg: &CompiledMessage) -> String {
     let n = msg.num_required_signatures as usize;
     let mut tx = Vec::with_capacity(1 + n * 64 + msg.bytes.len());
     tx.extend(encode_len(n));
-    tx.extend(std::iter::repeat(0u8).take(n * 64));
+    tx.extend(std::iter::repeat_n(0u8, n * 64));
     tx.extend_from_slice(&msg.bytes);
     base64(&tx)
 }
@@ -306,7 +306,7 @@ mod tests {
         // decode the shortvec + signature region by re-deriving: 1 sig => 65 byte prefix.
         // Just assert it is valid base64 of the expected total length.
         let raw_len = 1 + 64 + msg.bytes.len();
-        assert_eq!(b64.len(), (raw_len + 2) / 3 * 4);
+        assert_eq!(b64.len(), raw_len.div_ceil(3) * 4);
     }
 
     #[test]

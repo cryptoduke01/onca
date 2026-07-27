@@ -26,11 +26,7 @@ impl RpcTransport for MockRpc {
     fn post_json(&self, _url: &str, body: &str) -> onca_core::Result<String> {
         let req: Value = serde_json::from_str(body).unwrap();
         let method = req["method"].as_str().unwrap_or("");
-        let result = self
-            .results
-            .get(method)
-            .cloned()
-            .unwrap_or_else(|| json!(null));
+        let result = self.results.get(method).cloned().unwrap_or(json!(null));
         Ok(json!({"jsonrpc": "2.0", "id": 1, "result": result}).to_string())
     }
 }
