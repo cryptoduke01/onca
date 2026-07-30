@@ -1,0 +1,24 @@
+[package]
+name = "onca-resolve"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "The consumer side: a prediction-market resolver pays the x402 oracle and settles a market on the trusted, manipulation-resistant value."
+publish = false
+
+[[bin]]
+name = "onca-resolve"
+path = "src/main.rs"
+
+# Closes the machine-commerce loop: Onca sells the oracle read (onca-x402), this
+# agent buys it. It builds and signs a real Solana payment with onca-core, calls
+# the paywalled oracle, and resolves a market on the answer. No key ever leaves
+# this tool; the oracle holds nothing.
+[dependencies]
+onca-core = { path = "../../crates/onca-core" }
+ed25519-dalek = "2"
+bs58 = "0.5"
+ureq = { version = "2", features = ["json"] }
+serde_json = "1"
+
+[workspace]

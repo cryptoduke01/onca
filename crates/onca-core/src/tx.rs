@@ -251,6 +251,24 @@ pub fn advance_nonce_instruction(nonce_account: &Pubkey, authority: &Pubkey) -> 
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// System Transfer (instruction index 2): move lamports from -> to.
+// ─────────────────────────────────────────────────────────────────────────
+
+/// Build a System `Transfer` instruction moving `lamports` from `from` to `to`.
+/// This is what an x402 client pays with: a plain SOL transfer the paywall
+/// server then verifies as the fee for a metered read.
+pub fn transfer_instruction(from: &Pubkey, to: &Pubkey, lamports: u64) -> Instruction {
+    let system = Pubkey::from_base58(crate::pubkey::known::SYSTEM_PROGRAM).unwrap();
+    let mut data = 2u32.to_le_bytes().to_vec(); // Transfer
+    data.extend_from_slice(&lamports.to_le_bytes());
+    Instruction {
+        program_id: system,
+        accounts: vec![AccountMeta::signer_writable(*from), AccountMeta::writable(*to)],
+        data,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -335,5 +353,14 @@ mod tests {
         assert_eq!(ix.accounts.len(), 3);
         assert!(ix.accounts[0].is_writable && !ix.accounts[0].is_signer); // nonce account
         assert!(ix.accounts[2].is_signer); // authority signs
+    }
+
+    #[test]
+    fn transfer_instruction_shape() {
+        let ix = transfer_instruction(&pk(1), &pk(2), 1_000_000);
+        assert_eq!(&ix.data[0..4], &[2, 0, 0, 0]); // System Transfer index (u32 LE)
+        assert_eq!(&ix.data[4..12], &1_000_000u64.to_le_bytes());
+        assert!(ix.accounts[0].is_signer && ix.accounts[0].is_writable); // from
+        assert!(!ix.accounts[1].is_signer && ix.accounts[1].is_writable); // to
     }
 }

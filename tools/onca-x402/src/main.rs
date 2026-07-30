@@ -45,21 +45,31 @@ fn rpc(rpc_url: &str, method: &str, params: Value) -> Value {
 /// `min_lamports` (the price). This is the same balance-delta check
 /// `payment-watch` does, on native SOL for the demo.
 fn payment_ok(rpc_url: &str, sig: &str, treasury: &str, min_lamports: u64) -> bool {
-    let tx = rpc(rpc_url, "getTransaction", json!([sig, {"encoding": "json", "maxSupportedTransactionVersion": 0}]));
-    let result = &tx["result"];
-    if !result["meta"]["err"].is_null() {
-        return false; // failed tx
+    // getTransaction can lag behind sendTransaction on a public RPC, so poll a
+    // few times before concluding the payment is not there.
+    for attempt in 0..10 {
+        let tx = rpc(rpc_url, "getTransaction", json!([sig, {"encoding": "json", "maxSupportedTransactionVersion": 0, "commitment": "confirmed"}]));
+        let result = &tx["result"];
+        if result.is_null() {
+            if attempt < 9 {
+                std::thread::sleep(std::time::Duration::from_millis(1500));
+            }
+            continue; // not visible yet
+        }
+        if !result["meta"]["err"].is_null() {
+            return false; // failed tx
+        }
+        let Some(keys) = result["transaction"]["message"]["accountKeys"].as_array() else {
+            return false;
+        };
+        let Some(idx) = keys.iter().position(|k| k.as_str() == Some(treasury)) else {
+            return false; // treasury not credited by this tx
+        };
+        let pre = result["meta"]["preBalances"][idx].as_u64().unwrap_or(0);
+        let post = result["meta"]["postBalances"][idx].as_u64().unwrap_or(0);
+        return post.saturating_sub(pre) >= min_lamports;
     }
-    let keys = match result["transaction"]["message"]["accountKeys"].as_array() {
-        Some(k) => k,
-        None => return false,
-    };
-    let Some(idx) = keys.iter().position(|k| k.as_str() == Some(treasury)) else {
-        return false; // treasury not in this tx
-    };
-    let pre = result["meta"]["preBalances"][idx].as_u64().unwrap_or(0);
-    let post = result["meta"]["postBalances"][idx].as_u64().unwrap_or(0);
-    post.saturating_sub(pre) >= min_lamports
+    false
 }
 
 /// Read each mesh node's latest attestation and settle (median, outliers
