@@ -9,7 +9,9 @@
 //!
 //! Usage (after approving the attestation in Telegram):
 //!
-//!     onca-signer --sensor dht11-a --value 24.1 --unit C --seq 2 --timestamp 1625148650
+//!     onca-signer --sensor dht11-a --value 24.1 --unit C --seq 2
+//!
+//! `--timestamp` is optional; it defaults to the current unix time.
 //!
 //! Device key: `~/.onca/device.json` (a standard Solana keypair; create with
 //! `solana-keygen new -o ~/.onca/device.json` and fund it with
@@ -65,7 +67,14 @@ fn main() {
     let value = arg("--value", "24.1");
     let unit = arg("--unit", "C");
     let seq = arg("--seq", "2");
-    let ts = arg("--timestamp", "1625148650");
+    // Default to the current unix time; the agent leaves timestamp unset and the
+    // host stamps it, so the signer does the same rather than baking in a stale one.
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+        .to_string();
+    let ts = arg("--timestamp", &now);
     let memo = format!("onca:attest s={sensor} v={value} u={unit} seq={seq} t={ts}");
     eprintln!("memo:    {memo}");
 

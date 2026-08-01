@@ -1,12 +1,21 @@
 # Onca
 
 Onca is a set of Solana tools for the [ZeroClaw](https://github.com/zeroclaw-labs/zeroclaw)
-agent runtime. The tools let an agent handle money. They also keep the agent
-safe while it does so.
+agent runtime. The tools let an agent touch Solana — take a payment, check a
+token, attest a sensor reading, run an oracle — and keep the agent safe while it
+does so.
 
 [![Onca — the agent proposes, you dispose](docs/assets/site-hero.jpg)](https://onca.run)
 
 Site: [onca.run](https://onca.run) · Source: this monorepo (`site/`)
+
+**The flagship use case** is a manipulation-resistant DePIN oracle for prediction
+markets: independent sensor nodes attest their readings on Solana behind a human
+approval gate, a mesh settles on the median with outliers dropped and repeat
+liars frozen out on reputation, and the trusted value is sold over x402 so a
+market resolver can pay for it and settle. The full write-up, with on-chain
+proofs, is in [showcase/SHOWCASE.md](showcase/SHOWCASE.md); the runbook is
+[showcase/SETUP.md](showcase/SETUP.md).
 
 ## The name
 
@@ -39,21 +48,29 @@ and the threat model for the whole suite.
 
 | Component | Tier | Holds | What it does |
 |---|---|---|---|
-| [`onca-core`](crates/onca-core) | — | nothing | The shared Solana library: base58, pubkey, JSON-RPC, amount math, and hand-rolled transaction assembly (memo, durable nonce). Pure Rust, no input or output. Every plugin uses it. |
+| [`onca-core`](crates/onca-core) | — | nothing | The shared Solana library: base58, pubkey, JSON-RPC, amount math, hand-rolled transaction assembly (memo, System Transfer, durable nonce), and the mesh aggregation with a reputation layer. Pure Rust, no input or output. Everything uses it. |
+| [`depin-attest`](plugins/depin-attest) | T1 | nothing | Turns a sensor reading into an unsigned attestation transaction with a replay guard. A ZeroClaw device becomes a Solana-reporting DePIN node. |
+| [`onca-signer`](tools/onca-signer) | — | device key | The human-disposes side: holds the device key the agent never sees, rebuilds the approved attestation, signs it, and submits. Run by a person, not the agent. |
+| [`mesh-oracle`](plugins/mesh-oracle) / [`onca-oracle`](tools/onca-oracle) | T0 | RPC key | Reads the mesh of on-chain attestations and settles on the median: outliers dropped, quorum required, and repeat liars frozen out on persistent reputation. |
+| [`onca-x402`](tools/onca-x402) | T0 | RPC key | Sells the trusted value over [x402](https://x402.org): `402 Payment Required`, verify the Solana payment landed, then return the mesh reading. |
+| [`onca-resolve`](tools/onca-resolve) | — | pays only | The consumer: pays the x402 fee, reads the value back, and settles a prediction market YES/NO. Holds nothing of the oracle's. |
 | [`solana-pay-request`](plugins/solana-pay-request) | T1 | nothing | Turns a request such as "charge table 4 for 25 USDC" into a Solana Pay URL and QR code. A person signs it. |
 | [`token-risk-check`](plugins/token-risk-check) | T0 | RPC key | Reads a mint and gives a red, amber, or green verdict: authorities, Token-2022 traps, and holder concentration. |
 | [`payment-watch`](plugins/payment-watch) | T0 | RPC key | Watches a Solana Pay reference and confirms that an invoice was paid: the right amount, to the right wallet. |
-| [`depin-attest`](plugins/depin-attest) | T1 | nothing | Turns a sensor reading into an unsigned attestation transaction with a replay guard. A ZeroClaw device becomes a Solana-reporting DePIN node. |
 
 Read the tiers this way. A T0 tool reads and reports. A T1 tool builds a request
 that a person signs. Onca has no T2 tool. A T2 tool signs and sends. That tier
-is where one successful attack empties a wallet, and no tool here needs it.
+is where one successful attack empties a wallet, and no tool here needs it. The
+one component that holds a spending key, `onca-signer`, is a separate binary a
+human runs — never the agent — which is the T1 custody boundary made literal.
 
-The plugins reach from payments to the physical edge. `solana-pay-request` asks
-for money. `payment-watch` confirms it arrived. `token-risk-check` stops the
-agent before it touches a bad token. `depin-attest` lets a device report a
-sensor reading to Solana. All of them build on `onca-core`, and none of them
-holds a key that can spend.
+The tools reach from a physical sensor to a settled market. `depin-attest` lets a
+device report a reading behind a human tap; `onca-signer` lands it; `onca-oracle`
+aggregates the mesh into one manipulation-resistant value; `onca-x402` sells that
+value and `onca-resolve` buys it to settle a market. The payment tools round it
+out: `solana-pay-request` asks for money, `payment-watch` confirms it arrived,
+and `token-risk-check` stops the agent before it touches a bad token. All build
+on `onca-core`, and none of the agent-side tools holds a key that can spend.
 
 ## The core
 
@@ -117,7 +134,9 @@ You can test everything on the host. You do not need a wasm toolchain or a
 network:
 
 ```bash
-cd crates/onca-core           && cargo test
+cd crates/onca-core           && cargo test   # engine + mesh + reputation
+cd plugins/depin-attest       && cargo test
+cd plugins/mesh-oracle        && cargo test
 cd plugins/solana-pay-request && cargo test
 cd plugins/token-risk-check   && cargo test
 cd plugins/payment-watch      && cargo test
@@ -135,19 +154,23 @@ cargo build --target wasm32-wasip2 --release
 
 ## Status
 
-The core and all four plugins are complete: each has a pure Rust core, a wasm
+The core and all five plugins are complete: each has a pure Rust core, a wasm
 component that builds clean for `wasm32-wasip2`, host tests with a fail-closed
 prompt-injection case, a manifest with the fewest permissions, and a README with
 a threat model.
 
-The tools are the means, not the submission. The submission is a running use
-case: a self-hosted ZeroClaw agent on a real channel, running the DePIN
-attestation loop end to end. An ESP32 reads a sensor, the agent proposes an
-on-chain attestation through `depin-attest` behind a human approval checkpoint,
-and a person or a Squads multisig signs it. That agent, its config and SOPs, a
-three-minute video, and a reproducible write-up are the work in progress. The
-plugins run inside a source-built host (`--features plugins-wasm-cranelift`),
-where the component boundary is exercised for real, not just under host tests.
+The use case runs end to end, proven on devnet. A human-approved attestation
+lands on-chain through the Telegram agent and the human-run signer; the mesh
+reader aggregates independent nodes into one median, drops an outlier, and
+freezes a repeat liar on reputation; and the x402 loop pays for that value and
+settles a prediction market. The plugins run inside a source-built host
+(`--features plugins-wasm-cranelift`), where the component boundary is exercised
+for real, not just under host tests. On-chain proofs and the full walkthrough are
+in [showcase/SHOWCASE.md](showcase/SHOWCASE.md).
+
+What remains is presentation, not engineering: the three-minute video and the
+final submission. A live ESP32 node and USDC settlement are on the roadmap; the
+software loop stands on its own without either.
 
 ## License
 

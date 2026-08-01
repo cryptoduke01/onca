@@ -42,8 +42,9 @@ export default function HomePage() {
               animate={{ y: 0 }}
               transition={{ duration: 0.55, delay: 0.06, ease: easeOut }}
             >
-              Solana tools for ZeroClaw agents. They read the chain, or build a
-              request a person signs. Never a key that can spend.
+              A manipulation-resistant DePIN oracle for prediction markets, on
+              ZeroClaw agents. The tools read the chain, or build a request a
+              person signs. Never a key that can spend.
             </motion.p>
 
             <motion.div

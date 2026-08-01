@@ -32,14 +32,27 @@ proposes; a human disposes.
 
 **Read side (custody T0).** One node is not an oracle. `onca-oracle` reads many
 independent nodes' attestations back off-chain and settles on the **median**,
-dropping outliers, and refusing to settle below quorum. That single aggregated
-value is what a market consumes — and corrupting a minority of nodes changes
-nothing.
+dropping outliers, and refusing to settle below quorum. On top of the per-round
+median it keeps a **persistent reputation** for each node: a node whose readings
+keep getting rejected loses trust and is eventually frozen out of the aggregate
+entirely, so a node that lied wildly cannot later slip a plausible-looking value
+back into the median. That single aggregated value is what a market consumes, and
+corrupting a minority of nodes changes nothing.
+
+**Machine-commerce side (custody T0).** The trusted value is also sold over
+[x402](https://x402.org), the pay-per-call HTTP protocol: `onca-x402` answers a
+request with `402 Payment Required`, the caller pays a micro-fee on Solana, and
+on a verified payment the server returns the mesh value. `onca-resolve` is the
+other end — a prediction-market resolver that pays, reads the trusted number
+back, and settles a market YES/NO. The oracle sells its reading and an agent buys
+it, with no key ever leaving either tool.
 
 ## It runs — proofs on devnet
 
-Human-approved attestations, signed by the device key, finalized on Solana:
+Human-approved attestations, signed by the device key, finalized on Solana. Each
+started as a Telegram approval tap and was landed by the human-run signer:
 
+- [`onca:attest s=dht11-a v=23.7 u=C seq=7`](https://explorer.solana.com/tx/TntBSvQGSuzVscVU633q6Fjhnfbqk7jBRzfTz48r2ZwfeswLGqQjDbV8zjeNsaZrmxPLXGzmyVVXShQj9DXg2GE?cluster=devnet)
 - [`onca:attest s=dht11-a v=24.1 u=C seq=2`](https://explorer.solana.com/tx/5ATMiYLVGunuuZUa1F2svs1cKaoezm7NYkEsQeCzzozpymAr4Gvq9A1jHUAT3jTE6r4hTGfV4cXFeyPi9ZpEQX9z?cluster=devnet)
 - [`onca:attest s=dht11-a v=22.8 u=C seq=3`](https://explorer.solana.com/tx/4zcKbaX8WrPr4vEVWsmFYZ84wyEeiuE1HvpwskWbUM2X6FsTe3Yd1cShuPutPKt2ujgwy1HR6JR1nkeUyNJA3QEN?cluster=devnet)
 
@@ -48,12 +61,17 @@ Device: `BMpwFSKbLJvPpK4yo5EoqBiQUDxt9NdgFRToXJpiphrC`
 **The oracle rejecting a lying node, live on devnet.** A 4-node mesh; node 4 is
 an adversary signing 999°C *directly* — bypassing the honest agent and its
 approval gate, which is the real-world threat. `onca-oracle` read all four
-on-chain and settled:
+on-chain, dropped the outlier, and froze the repeat liar on trust:
 
 ```
-node 3xQ3…  23.4      node Ghri…  23.6
-node AxRK…  23.1      node BtpD…  999   ← rejected as outlier
-ORACLE VALUE: 23.4 C  (3 of 4 nodes agree)
+node 3xQ3…  reading 23.4      node Ghri…  reading 23.6
+node AxRK…  reading 23.1      node BtpD…  reading 999
+
+node 3xQ3…  trust 1.00        node Ghri…  trust 1.00
+node AxRK…  trust 1.00        node BtpD…  trust 0.00  FROZEN OUT
+
+rejected this round: BtpD…=999
+ORACLE VALUE: 23.4 C  (3 of 4 nodes trusted & agree)
 ```
 
 The same value served through the agent on Telegram: *"the trusted temperature
@@ -61,11 +79,22 @@ is 23.4°C, the median of 3 trusted nodes; 1 outlier rejected."* Corrupting one
 node does nothing — that is the property a market needs, and the reason this is
 an oracle and not just a sensor.
 
+**The paid oracle settling a market, live on devnet.** `onca-resolve` paid the
+x402 fee on Solana, read the trusted value back, and settled:
+
+```
+paid 1000000 lamports → x402 tx 29D5t8t4…BM63r2zS
+MARKET      Lagos temp > 25C
+ORACLE      23.4 C  (3 nodes agreed, 1 rejected)
+CONDITION   temp gt 25
+SETTLEMENT  NO
+```
+
 ## Custody ladder
 
 | Tier | Meaning | In Onca |
 |---|---|---|
-| **T0 Read** | reads and reports; a key at most | `mesh-oracle` (the aggregate), `token-risk-check`, `payment-watch` |
+| **T0 Read** | reads and reports; a key at most | `onca-oracle` and `mesh-oracle` (the aggregate), `onca-x402` (sells it), `onca-resolve` (buys + settles), `token-risk-check`, `payment-watch` |
 | **T1 Build** | builds an unsigned request a human signs | `depin-attest`, `solana-pay-request` |
 | **T2 Sign** | signs and sends | **not shipped** — no key ever lives in the agent |
 
@@ -80,10 +109,14 @@ bypasses the honest agent entirely. Four layers answer it:
 
 1. **Code-enforced bounds + replay guard** in pure Rust the model cannot override.
 2. **Oracle guidance**: the tool forbids the model rounding, substituting, or
-   inventing a reading, and requires it to surface a refusal and stop.
+   inventing a reading. It also forbids the model deciding on its own whether a
+   reading is a duplicate — it must call the tool every time and only relay a
+   refusal the tool actually returns, so the model can neither fabricate a value
+   nor silently skip an attestation from its own (possibly wrong) memory.
 3. **The human approval gate**: every attestation shows the exact value for a tap.
-4. **The mesh median**: a node that lies past all of that — signing a spoof with
-   its own key — is outvoted and dropped.
+4. **The mesh median + reputation**: a node that lies past all of that — signing a
+   spoof with its own key — is outvoted and dropped, and if it keeps lying it is
+   frozen out of the aggregate for good.
 
 ### Fail-closed transcript (required)
 
@@ -113,16 +146,21 @@ Agent: The sensor reading of 999 C is above the configured maximum of 85 C,
 
 - **`onca-core`** — a minimal `wasm32-wasip2` Solana engine: base58, pubkey,
   JSON-RPC over a transport trait, hand-assembled transactions (legacy message,
-  SPL Memo, durable nonce), and the mesh aggregation. Devnet-verified; 22 host
-  tests.
+  SPL Memo, System Transfer, durable nonce), and the mesh aggregation with a
+  reputation layer. Devnet-verified; 26 host tests.
 - **`depin-attest`** (Tier 3 plugin, **T1**) — reading → unsigned attestation,
   with code-enforced bounds, a monotonic replay guard, and a host-stamped time.
 - **`mesh-oracle`** (Tier 3 plugin, **T0**) — reads the mesh and settles on the
   median, outliers dropped, quorum required. Fault-tolerant per-node reads.
+- **`onca-oracle`** — the standalone, reliable mesh reader, with persistent
+  per-node reputation that freezes out repeat liars (the aggregate a market
+  consumes).
 - **`onca-signer`** — the human-disposes side: holds the device key, rebuilds the
   same attestation with `onca-core`, signs (ed25519), submits.
-- **`onca-oracle`** — the standalone, reliable mesh reader (the aggregate a
-  market consumes).
+- **`onca-x402`** — sells the trusted value over x402: `402 Payment Required`,
+  verify the Solana payment landed, then return the mesh reading. Replay-guarded.
+- **`onca-resolve`** — the consumer: pays the x402 fee (a real transfer built and
+  signed with `onca-core`), reads the value back, and settles a market YES/NO.
 - **ESP32 firmware + serial bridge** — a DHT11 node printing `onca:reading` lines
   the pipeline ingests. The software loop runs identically with a typed reading,
   so the demo does not depend on hardware.
@@ -155,12 +193,18 @@ Engine: [`crates/onca-core`](../crates/onca-core); plugins:
 [`plugins/depin-attest`](../plugins/depin-attest),
 [`plugins/mesh-oracle`](../plugins/mesh-oracle); tools:
 [`tools/onca-signer`](../tools/onca-signer),
-[`tools/onca-oracle`](../tools/onca-oracle).
+[`tools/onca-oracle`](../tools/onca-oracle),
+[`tools/onca-x402`](../tools/onca-x402),
+[`tools/onca-resolve`](../tools/onca-resolve).
 
 ## Roadmap
 
 - **Live ESP32** as a real physical node in the mesh (firmware + bridge written).
 - **Geographic, staked mesh** — independent operators run nodes, stake, and earn;
-  reputation weights the aggregate and a proven liar is slashed.
+  the reputation layer that already freezes liars grows into on-chain staking
+  where a proven liar is slashed, not just frozen.
+- **USDC settlement** — the x402 demo prices in native SOL so it runs on the
+  funded devnet keys; production swaps the asset for SPL USDC (the payment-verify
+  shape, a balance delta credited to the treasury, is identical).
 - **Squads multisig dispose** — the agent proposes, a multisig approves from a
   phone, replacing the single-key signer.

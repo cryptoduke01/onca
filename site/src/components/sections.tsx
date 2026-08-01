@@ -110,9 +110,26 @@ onca  solana:7xKX…?amount=25
       name: "depin-attest",
       tier: "T1",
       body: "Turns a sensor reading into an unsigned attestation transaction with a monotonic replay guard. A ZeroClaw device becomes a Solana-reporting node.",
-      sample: `esp32  bme280-a → 23.4°C
+      sample: `esp32  dht11-a → 23.4°C
 onca   Attestation #42
        seq must increase`,
+      reverse: true,
+    },
+    {
+      name: "onca-oracle",
+      tier: "T0",
+      body: "Reads the mesh of on-chain attestations and settles on the median. Outliers drop, quorum guards, and a node that keeps lying is frozen out on reputation, so a minority cannot move the number.",
+      sample: `onca  ORACLE 23.4°C
+      3 of 4 nodes agree
+      liar 999 → frozen`,
+    },
+    {
+      name: "onca-x402",
+      tier: "T0",
+      body: "Sells the trusted value over x402. Answers 402, verifies the Solana payment landed, then returns the reading. A prediction market pays per call and settles on the answer.",
+      sample: `caller  GET /oracle → 402
+        pays 0.001 SOL
+onca    200 · 23.4°C`,
       reverse: true,
     },
   ];
@@ -151,7 +168,7 @@ onca   Attestation #42
         </div>
 
         <p className="mt-10 max-w-2xl text-[1.02rem] text-ink-dim">
-          All four sit on{" "}
+          All of them sit on{" "}
           <a
             href={`${REPO}/tree/main/crates/onca-core`}
             target="_blank"
@@ -161,8 +178,8 @@ onca   Attestation #42
             onca-core
           </a>
           : a wasm-friendly Solana library with no solana-sdk, no I/O,
-          hand-rolled transaction assembly with durable nonce, and a mockable
-          transport under cargo test.
+          hand-rolled transaction assembly with durable nonce, the mesh
+          aggregation and reputation, and a mockable transport under cargo test.
         </p>
       </div>
     </section>

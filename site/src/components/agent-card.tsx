@@ -5,7 +5,7 @@ import { useState, type ReactNode } from "react";
 import { easeOut, motion, useReducedMotion } from "@/components/motion";
 import { cn } from "@/lib/utils";
 
-type Tab = "pay" | "risk" | "watch" | "attest";
+type Tab = "pay" | "risk" | "watch" | "attest" | "oracle";
 
 const panes: Record<
   Tab,
@@ -95,7 +95,7 @@ const panes: Record<
     title: "Sensor attest",
     subtitle: "depin-attest · T1",
     lines: [
-      { role: "esp32", text: "bme280-a → 23.4°C, seq 42" },
+      { role: "esp32", text: "dht11-a → 23.4°C, seq 42" },
       {
         role: "onca",
         text: (
@@ -106,7 +106,7 @@ const panes: Record<
       },
       {
         role: "",
-        text: "onca:attest s=bme280-a v=23.4 u=C seq=42",
+        text: "onca:attest s=dht11-a v=23.4 u=C seq=42",
         dim: true,
       },
       {
@@ -116,13 +116,39 @@ const panes: Record<
       },
     ],
   },
+  oracle: {
+    title: "Mesh oracle",
+    subtitle: "onca-oracle · T0",
+    lines: [
+      { role: "market", text: "settle: Lagos over 25°C?" },
+      {
+        role: "onca",
+        text: (
+          <>
+            Oracle · <strong className="font-semibold text-card-ink">23.4°C</strong> · 3 of 4 nodes agree
+          </>
+        ),
+      },
+      {
+        role: "",
+        text: "node signing 999 rejected as outlier, frozen on reputation",
+        dim: true,
+      },
+      {
+        role: "",
+        text: "corrupt a minority, the median holds",
+        dim: true,
+      },
+    ],
+  },
 };
 
 const tabs: { id: Tab; label: string }[] = [
+  { id: "oracle", label: "oracle" },
+  { id: "attest", label: "attest" },
   { id: "pay", label: "pay" },
   { id: "risk", label: "risk" },
   { id: "watch", label: "watch" },
-  { id: "attest", label: "attest" },
 ];
 
 /**
@@ -130,7 +156,7 @@ const tabs: { id: Tab; label: string }[] = [
  * real tool tabs, expanded body. User-requested mac-style border.
  */
 export function AgentCard() {
-  const [tab, setTab] = useState<Tab>("pay");
+  const [tab, setTab] = useState<Tab>("oracle");
   const [copied, setCopied] = useState(false);
   const pane = panes[tab];
   const cmd = "cargo build --target wasm32-wasip2 --release";
