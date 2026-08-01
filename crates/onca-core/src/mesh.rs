@@ -12,6 +12,8 @@
 //! the manipulation-resistant aggregate. No I/O — `onca-oracle` supplies the
 //! on-chain readings.
 
+use std::collections::HashMap;
+
 /// One node's latest attested reading, as read back from its on-chain memo.
 #[derive(Debug, Clone, PartialEq)]
 pub struct NodeReading {
@@ -19,6 +21,59 @@ pub struct NodeReading {
     pub value: f64,
     pub seq: u64,
     pub timestamp: u64,
+}
+
+/// A node's earned trust: how often its readings agreed with the mesh vs. how
+/// often they were rejected as outliers. Persisted across reads so a node that
+/// lies repeatedly builds a record and eventually gets frozen out — one bad
+/// round is an outlier, a pattern of them is an untrustworthy node.
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
+pub struct Reputation {
+    pub agreements: u32,
+    pub rejections: u32,
+}
+
+impl Reputation {
+    /// Trust score in `[0, 1]`. A node with no history is neutral (`0.5`).
+    pub fn score(&self) -> f64 {
+        let total = self.agreements + self.rejections;
+        if total == 0 {
+            0.5
+        } else {
+            self.agreements as f64 / total as f64
+        }
+    }
+}
+
+/// Aggregate, but first freeze out nodes whose trust has fallen below
+/// `min_score`. A frozen node's reading never even enters the median — it lands
+/// in `outliers`. New nodes (neutral 0.5) pass while they build a record. This
+/// is the reputation layer on top of per-round outlier rejection: it stops a
+/// node that has *repeatedly* lied from ever mattering again.
+pub fn aggregate_trusted(
+    readings: &[NodeReading],
+    reputations: &HashMap<String, Reputation>,
+    tolerance: f64,
+    quorum: usize,
+    min_score: f64,
+) -> Aggregate {
+    let (trusted, frozen): (Vec<_>, Vec<_>) = readings.iter().cloned().partition(|r| {
+        reputations.get(&r.device).map(Reputation::score).unwrap_or(0.5) >= min_score
+    });
+    let mut agg = aggregate(&trusted, tolerance, quorum);
+    agg.outliers.extend(frozen); // frozen-out nodes are rejected, just for cause
+    agg
+}
+
+/// Fold one settled read back into the reputation record: every node that
+/// agreed gains an agreement, every rejected node gains a rejection.
+pub fn update_reputation(reputations: &mut HashMap<String, Reputation>, agg: &Aggregate) {
+    for r in &agg.inliers {
+        reputations.entry(r.device.clone()).or_default().agreements += 1;
+    }
+    for r in &agg.outliers {
+        reputations.entry(r.device.clone()).or_default().rejections += 1;
+    }
 }
 
 /// Parse an `onca:attest s=<sensor> v=<value> u=<unit> seq=<n> t=<ts>` memo into
@@ -147,5 +202,44 @@ mod tests {
         let mesh = [r("a", 23.4), r("b", 23.6)];
         let agg = aggregate(&mesh, 5.0, 3);
         assert!(!agg.has_quorum); // a market must not settle on two nodes
+    }
+
+    #[test]
+    fn reputation_starts_neutral_then_shifts() {
+        assert_eq!(Reputation::default().score(), 0.5); // no history = neutral
+        assert_eq!(Reputation { agreements: 3, rejections: 1 }.score(), 0.75);
+    }
+
+    /// A node that lies every round loses trust and is eventually frozen out of
+    /// the aggregate entirely — even a *plausible* reading from it is rejected.
+    #[test]
+    fn a_repeat_liar_gets_frozen_out() {
+        let mut reps: HashMap<String, Reputation> = HashMap::new();
+        let min_score = 0.4;
+        for _ in 0..5 {
+            let round = [r("a", 23.4), r("b", 23.6), r("c", 23.1), r("attacker", 999.0)];
+            let agg = aggregate_trusted(&round, &reps, 5.0, 3, min_score);
+            update_reputation(&mut reps, &agg);
+        }
+        assert!(reps["attacker"].score() < min_score); // trust cratered
+
+        // Now the attacker reports a believable 23.5 — still frozen out.
+        let round = [r("a", 23.4), r("b", 23.6), r("c", 23.1), r("attacker", 23.5)];
+        let agg = aggregate_trusted(&round, &reps, 5.0, 3, min_score);
+        assert!(agg.outliers.iter().any(|o| o.device == "attacker"));
+        assert!(agg.inliers.iter().all(|i| i.device != "attacker"));
+        assert_eq!(agg.value, 23.4); // the honest nodes still settle it
+    }
+
+    #[test]
+    fn honest_nodes_keep_full_trust() {
+        let mut reps: HashMap<String, Reputation> = HashMap::new();
+        for _ in 0..5 {
+            let round = [r("a", 23.4), r("b", 23.6), r("c", 23.1)];
+            let agg = aggregate_trusted(&round, &reps, 5.0, 3, 0.4);
+            update_reputation(&mut reps, &agg);
+        }
+        assert_eq!(reps["a"].score(), 1.0);
+        assert_eq!(reps["a"].rejections, 0);
     }
 }

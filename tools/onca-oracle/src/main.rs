@@ -13,7 +13,10 @@
 
 use std::env;
 
-use onca_core::mesh::{aggregate, parse_attest, NodeReading};
+use std::collections::HashMap;
+use std::fs;
+
+use onca_core::mesh::{aggregate_trusted, parse_attest, update_reputation, NodeReading, Reputation};
 use serde_json::{json, Value};
 
 const RPC: &str = "https://api.devnet.solana.com";
@@ -63,12 +66,21 @@ fn main() {
     let sensor = arg("--sensor", "dht11-a");
     let tolerance: f64 = arg("--tolerance", "5.0").parse().unwrap_or(5.0);
     let quorum: usize = arg("--quorum", "3").parse().unwrap_or(3);
+    let min_score: f64 = arg("--min-score", "0.4").parse().unwrap_or(0.4);
     if devices.is_empty() {
-        eprintln!("usage: onca-oracle --devices <pubkey,pubkey,...> --sensor dht11-a [--tolerance 5] [--quorum 3]");
+        eprintln!("usage: onca-oracle --devices <pubkey,pubkey,...> --sensor dht11-a [--tolerance 5] [--quorum 3] [--min-score 0.4]");
         std::process::exit(1);
     }
 
-    println!("mesh oracle · sensor={sensor} · tolerance=±{tolerance} · quorum={quorum}\n");
+    // Reputation persists across reads: a node that keeps getting rejected loses
+    // trust and is eventually frozen out — even a plausible reading from it.
+    let rep_path = format!("{}/.onca/reputation.json", env::var("HOME").unwrap_or_default());
+    let mut reps: HashMap<String, Reputation> = fs::read_to_string(&rep_path)
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default();
+
+    println!("mesh oracle · sensor={sensor} · tolerance=±{tolerance} · quorum={quorum} · min-trust={min_score}\n");
     let mut readings = Vec::new();
     for device in devices.split(',').filter(|s| !s.is_empty()) {
         match latest_reading(device, &sensor) {
@@ -80,16 +92,26 @@ fn main() {
         }
     }
 
-    let agg = aggregate(&readings, tolerance, quorum);
+    let agg = aggregate_trusted(&readings, &reps, tolerance, quorum, min_score);
+    update_reputation(&mut reps, &agg);
+    let _ = fs::write(&rep_path, serde_json::to_string_pretty(&reps).unwrap_or_default());
+
+    println!();
+    // Each node's standing after this round: score, and whether it is frozen out.
+    for r in &readings {
+        let score = reps.get(&r.device).map(Reputation::score).unwrap_or(0.5);
+        let tag = if score < min_score { "  FROZEN OUT" } else { "" };
+        println!("  node {}…  trust {:.2}{tag}", short(&r.device), score);
+    }
     println!();
     if !agg.outliers.is_empty() {
         let liars: Vec<String> = agg.outliers.iter().map(|r| format!("{}…={}", short(&r.device), r.value)).collect();
-        println!("  rejected as outliers: {}", liars.join(", "));
+        println!("  rejected this round: {}", liars.join(", "));
     }
     if agg.has_quorum {
-        println!("  ORACLE VALUE: {} {}  ({} of {} nodes agree)", agg.value, sensor_unit(&sensor), agg.inliers.len(), readings.len());
+        println!("  ORACLE VALUE: {} {}  ({} of {} nodes trusted & agree)", agg.value, sensor_unit(&sensor), agg.inliers.len(), readings.len());
     } else {
-        println!("  NO SETTLEMENT: only {} node(s) agreed, quorum is {}", agg.inliers.len(), quorum);
+        println!("  NO SETTLEMENT: only {} trusted node(s) agreed, quorum is {}", agg.inliers.len(), quorum);
         std::process::exit(2);
     }
 }
