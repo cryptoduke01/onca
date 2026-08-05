@@ -1,9 +1,11 @@
-# Onca — reproducible ZeroClaw config for the DePIN attestation use case.
+# Onca — reproducible ZeroClaw config for the full agent.
 #
-# This is the whole agent: a Telegram bot that turns a sensor reading into an
-# unsigned Solana attestation behind a human approval gate. No secrets live in
-# this file. Copy it to ~/.zeroclaw/config.toml, fill in <DEVICE_PUBKEY>, and
-# inject the two secrets via environment variables at launch (see SETUP.md).
+# A public Telegram bot that settles live prediction markets on a sensor mesh,
+# attests readings on-chain behind a human approval gate, and handles the payment
+# lane (pay / risk / watch). Every tool is T0/T1: it reads or builds unsigned,
+# and holds no key. No secrets live in this file. Copy it to ~/.zeroclaw/config.toml,
+# fill in the <PUBKEY> placeholders, and inject the two secrets via environment
+# variables at launch (see SETUP.md).
 
 schema_version = 3
 
@@ -33,6 +35,29 @@ devices = "<PUBKEY1>,<PUBKEY2>,<PUBKEY3>,<PUBKEY4>"
 sensor = "dht11-a"
 tolerance = "5"
 quorum = "3"
+rpc_url = "https://api.devnet.solana.com"
+
+# ── The payment lane (all keyless). Drop these three if you only want the
+#    oracle; they are what makes the bot handle pay / risk / watch too.
+[[plugins.entries]]
+name = "solana-pay-request"          # T1: build a Solana Pay URL/QR (no key)
+
+[plugins.entries.config]
+allowed_mints = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"  # USDC only
+max_amount = "1000"
+label = "Onca"
+
+[[plugins.entries]]
+name = "token-risk-check"            # T0: red/amber/green from on-chain facts
+
+[plugins.entries.config]
+rpc_url = "https://api.devnet.solana.com"
+
+[[plugins.entries]]
+name = "payment-watch"               # T0: confirm a Solana Pay reference was paid
+
+[plugins.entries.config]
+rpc_url = "https://api.devnet.solana.com"
 
 # ── The model. api_key is injected via
 #    ZEROCLAW_providers__models__groq__default__api_key
@@ -44,22 +69,34 @@ model = "llama-3.3-70b-versatile"
 model_provider = "groq.default"
 risk_profile = "onca"
 channels = ["telegram.main"]
-# The Tier-1 skill that settles a live Jupiter weather market on the mesh (see SETUP.md).
+# The onca skill bundle: settle-weather-market (settle a live Jupiter market on
+# the mesh) and onca-guide (greet new users). See SETUP.md.
 skill_bundles = ["onca"]
+
+# Public bot: do not auto-save every stranger's chat. Memory holds only what the
+# agent is explicitly told to record, so it stays scoped to its job.
+[agents.onca.memory]
+backend = "sqlite"
+auto_save = false
 
 # ── Custody: supervised autonomy + forced approval on every attestation.
 [risk_profiles.onca]
 level = "supervised"
-# Least privilege: the agent sees only this one tool. Also keeps each request
-# under Groq's free-tier token-per-minute limit (bounty trap #3: don't flood context).
-allowed_tools = ["depin_attest", "mesh_oracle", "http_request"]
+# All five Onca tools plus the built-in http_request the settle-weather skill
+# uses. Every one is T0/T1 (reads or builds unsigned), so none holds a key. A
+# broad tool set makes each request larger; on the Groq free tier's 12k TPM that
+# can strain, so use the Groq Dev tier for a busy public bot (bounty trap #3).
+allowed_tools = ["depin_attest", "mesh_oracle", "http_request", "solana_pay_request", "token_risk_check", "payment_watch"]
 # Every depin_attest call pauses for a human tap-to-approve in Telegram.
 always_ask = ["depin_attest"]
-# Reads need no tap: the mesh read (mesh_oracle) and the live market read
-# (Jupiter over the built-in http_request), which the settle-weather skill uses.
-auto_approve = ["mesh_oracle", "http_request"]
+# The read/build tools need no tap; none of them can move funds.
+auto_approve = ["mesh_oracle", "http_request", "token_risk_check", "payment_watch", "solana_pay_request"]
 
 # ── The channel. bot_token is injected via
 #    ZEROCLAW_channels__telegram__main__bot_token
 [channels.telegram.main]
 enabled = true
+# Anyone can DM the bot. Throttle to one reply / 10s per chat so a spammer can't
+# drain the Groq daily quota and silence it.
+reply_min_interval_secs = 10
+reply_queue_depth_max = 5
