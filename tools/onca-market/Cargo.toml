@@ -1,0 +1,22 @@
+[package]
+name = "onca-market"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Resolve a live Solana prediction market (Jupiter/Polymarket) against the manipulation-resistant Onca mesh oracle instead of a single trusted source."
+publish = false
+
+[[bin]]
+name = "onca-market"
+path = "src/main.rs"
+
+# Custody T0 (read only). Reads a live weather market from Jupiter's keyless
+# prediction API and settles which outcome the Onca mesh (median of independent
+# on-chain attestations, outliers dropped, repeat liars frozen) picks. The
+# market that exists today settles on one oracle; this shows the mesh instead.
+[dependencies]
+onca-core = { path = "../../crates/onca-core" }
+ureq = { version = "2", features = ["json"] }
+serde_json = "1"
+
+[workspace]
