@@ -17,6 +17,22 @@ market resolver can pay for it and settle. The full write-up, with on-chain
 proofs, is in [showcase/SHOWCASE.md](showcase/SHOWCASE.md); the runbook is
 [showcase/SETUP.md](showcase/SETUP.md).
 
+## Try it in 30 seconds (no keys, no wallet)
+
+Watch a **live** Solana weather market settle on the mesh instead of a single
+source. Needs only a Rust toolchain:
+
+```bash
+git clone https://github.com/cryptoduke01/onca && cd onca
+cargo run --release --manifest-path tools/onca-market/Cargo.toml
+```
+
+It reads a real, open [Polymarket-on-Solana](https://jup.ag) weather market via
+Jupiter's keyless API, reads a 4-node on-chain attestation mesh, freezes the node
+signing a lie, and prints the winning outcome — the value no single source set.
+To run the whole agent (Telegram approval gate, on-chain attestation, x402),
+follow [showcase/SETUP.md](showcase/SETUP.md).
+
 ## The name
 
 Onca comes from *onça*, the Portuguese word for the jaguar. The jaguar is the
