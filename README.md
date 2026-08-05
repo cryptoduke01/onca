@@ -55,6 +55,8 @@ and the threat model for the whole suite.
 | [`onca-x402`](tools/onca-x402) | T0 | RPC key | Sells the trusted value over [x402](https://x402.org): `402 Payment Required`, verify the Solana payment landed, then return the mesh reading. |
 | [`onca-resolve`](tools/onca-resolve) | — | pays only | The consumer: pays the x402 fee, reads the value back, and settles a prediction market YES/NO. Holds nothing of the oracle's. |
 | [`onca-market`](tools/onca-market) | T0 | RPC key | Settles a *live* Solana prediction market: reads a real weather market from Jupiter's keyless prediction API (Polymarket liquidity on Solana) and maps the mesh value to the winning outcome. |
+| [`onca-trade`](tools/onca-trade) | T1 | nothing | Builds an *unsigned* Jupiter order on the mesh's winning outcome for a human to sign. Fails closed without USDC. |
+| [`settle-weather-market`](skills/settle-weather-market) | Tier 1 | nothing | A ZeroClaw skill (no compiled code): the agent composes the built-in `http_request` with `mesh_oracle` to settle the live market on-channel. |
 | [`solana-pay-request`](plugins/solana-pay-request) | T1 | nothing | Turns a request such as "charge table 4 for 25 USDC" into a Solana Pay URL and QR code. A person signs it. |
 | [`token-risk-check`](plugins/token-risk-check) | T0 | RPC key | Reads a mint and gives a red, amber, or green verdict: authorities, Token-2022 traps, and holder concentration. |
 | [`payment-watch`](plugins/payment-watch) | T0 | RPC key | Watches a Solana Pay reference and confirms that an invoice was paid: the right amount, to the right wallet. |

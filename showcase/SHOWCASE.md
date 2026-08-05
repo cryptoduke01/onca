@@ -103,9 +103,29 @@ MESH     node BtpD signs 999 → FROZEN OUT;  3 nodes agree
 SETTLE   Onca mesh 23.4 C → winning outcome "23°C"  — no single source set it
 ```
 
-To actually trade the outcome, Jupiter's `POST /orders` returns an **unsigned**
-transaction a human signs — the same T1 ladder `onca-signer` runs. The agent
-holds no key.
+The market names its own single source. Its resolution rule, verbatim from
+Jupiter: *"the highest temperature recorded at the São Paulo-Guarulhos
+International Airport Station."* One station, one reading, one point to
+manipulate. Onca settles the same market on a mesh of independent nodes instead.
+
+**And the agent does this itself, on the channel — not a script.** A ZeroClaw
+Tier-1 skill ([`skills/settle-weather-market`](../skills/settle-weather-market/SKILL.md))
+composes the built-in `http_request` (read the live market) with the
+`mesh_oracle` tool (the trusted value). Asked in Telegram to settle the São Paulo
+market, the agent returns:
+
+```
+Highest temperature in Sao Paulo on August 6?  (POLY-798942)
+23.4°C (3 agreed, 1 rejected)
+winning bucket 23°C — marketId POLY-3350728
+No single source set this; it takes a majority of independent nodes to move it.
+```
+
+To *trade* the outcome (custody T1), `onca-trade` asks Jupiter to build the
+order: `POST /orders` returns an **unsigned** transaction a human signs (in a
+wallet or with `onca-signer`). Without USDC it fails closed at Jupiter
+("Insufficient funds") — the agent built the request, held no key, and submitted
+nothing.
 
 ## Custody ladder
 
@@ -181,6 +201,13 @@ Agent: The sensor reading of 999 C is above the configured maximum of 85 C,
 - **`onca-market`** — settles a **live** Solana prediction market: reads a real
   weather market from Jupiter's keyless prediction API (Polymarket liquidity on
   Solana) and maps the mesh value to the winning outcome bucket. Tier 1 read.
+- **`onca-trade`** (**T1**) — builds an *unsigned* Jupiter order on the mesh's
+  winning outcome (`POST /orders`), for a human to sign. Fails closed without
+  USDC; holds no key.
+- **`settle-weather-market` skill** (**Tier 1**, no compiled code) — the agent
+  itself composes the built-in `http_request` with the `mesh_oracle` tool to
+  settle the live market on-channel. Correct layering: the read is a skill, not a
+  plugin. Proven end to end through `zeroclaw agent`.
 - **ESP32 firmware + serial bridge** — a DHT11 node printing `onca:reading` lines
   the pipeline ingests. The software loop runs identically with a typed reading,
   so the demo does not depend on hardware.
