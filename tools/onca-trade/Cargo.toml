@@ -1,0 +1,22 @@
+[package]
+name = "onca-trade"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Build an UNSIGNED Jupiter prediction-market order for the mesh's winning outcome. Custody T1: the agent builds, a human signs."
+publish = false
+
+[[bin]]
+name = "onca-trade"
+path = "src/main.rs"
+
+# Custody T1 (build only). Asks Jupiter's prediction API to construct an order on
+# the outcome the Onca mesh settled, and prints the UNSIGNED transaction it
+# returns. It holds no key, signs nothing, and submits nothing — a human signs
+# the unsigned tx (in their wallet or with onca-signer). Without USDC the order
+# fails closed at Jupiter, which is the honest custody boundary.
+[dependencies]
+ureq = { version = "2", features = ["json"] }
+serde_json = "1"
+
+[workspace]
