@@ -4,6 +4,13 @@ ZeroClaw skills are `SKILL.md` capabilities the agent composes from built-in
 tools — no compiled code. Correct layering: the read side of the oracle is a
 skill over the built-in `http_request`, not a plugin.
 
+## `onca-guide`
+
+The bot's onboarding voice. When a new person says hi, `/start`, or "what can you
+do", the agent greets them in a few plain lines: what Onca is, the three things
+to ask for, and the honest note that it holds no key and cannot create or hold a
+wallet. Makes a public Telegram bot usable by someone non-technical.
+
 ## `settle-weather-market`
 
 Teaches the agent to settle a live Solana weather prediction market on the Onca
