@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence } from "motion/react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { easeOut, motion, useReducedMotion } from "@/components/motion";
 import { cn } from "@/lib/utils";
 
@@ -151,6 +151,75 @@ const tabs: { id: Tab; label: string }[] = [
   { id: "watch", label: "watch" },
 ];
 
+/** A number that eases up to `to` on mount, so the oracle reads as live. */
+function CountUp({
+  to,
+  from = 0,
+  duration = 900,
+  decimals = 0,
+}: {
+  to: number;
+  from?: number;
+  duration?: number;
+  decimals?: number;
+}) {
+  const reduce = useReducedMotion();
+  const [val, setVal] = useState(reduce ? to : from);
+  useEffect(() => {
+    if (reduce) {
+      setVal(to);
+      return;
+    }
+    let raf = 0;
+    let start = 0;
+    const step = (t: number) => {
+      if (!start) start = t;
+      const p = Math.min((t - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+      setVal(from + (to - from) * eased);
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [to, from, duration, reduce]);
+  return <>{val.toFixed(decimals)}</>;
+}
+
+/** The oracle tab, rendered live: the value settles, the count climbs, and the
+ * lying node greys out as it is frozen. Remounts on tab switch to replay. */
+function OracleReadout() {
+  const reduce = useReducedMotion();
+  return (
+    <div className="space-y-3">
+      <p className="[overflow-wrap:anywhere] text-card-ink/90">
+        <span className="inline-block w-[3.6rem] shrink-0 text-card-faint">market</span>
+        settle: Lagos over 25°C?
+      </p>
+      <p className="[overflow-wrap:anywhere] text-card-ink/90">
+        <span className="inline-block w-[3.6rem] shrink-0 text-card-signal">onca</span>
+        Oracle ·{" "}
+        <strong className="font-semibold text-card-ink">
+          <CountUp to={23.4} from={19.6} decimals={1} />
+          °C
+        </strong>{" "}
+        · <CountUp to={3} from={0} duration={700} /> of 4 nodes agree
+      </p>
+      <motion.p
+        className="pl-[3.6rem] [overflow-wrap:anywhere] text-card-faint"
+        initial={reduce ? false : { opacity: 1 }}
+        animate={reduce ? {} : { opacity: 0.45 }}
+        transition={{ delay: 1.1, duration: 0.5, ease: easeOut }}
+      >
+        <span className="line-through decoration-card-bad/60">node signing 999</span>{" "}
+        rejected as outlier, frozen on reputation
+      </motion.p>
+      <p className="pl-[3.6rem] [overflow-wrap:anywhere] text-card-faint">
+        corrupt a minority, the median holds
+      </p>
+    </div>
+  );
+}
+
 /**
  * Signature product artifact: larger window chrome with traffic lights,
  * real tool tabs, expanded body. User-requested mac-style border.
@@ -242,28 +311,32 @@ export function AgentCard() {
             exit={reduce ? undefined : { y: -6 }}
             transition={{ duration: 0.22, ease: easeOut }}
           >
-            {pane.lines.map((line, i) => (
-              <p
-                key={i}
-                className={cn(
-                  "[overflow-wrap:anywhere]",
-                  line.dim && "pl-[3.6rem] text-card-faint",
-                  !line.dim && "text-card-ink/90"
-                )}
-              >
-                {line.role ? (
-                  <span
-                    className={cn(
-                      "inline-block w-[3.6rem] shrink-0",
-                      line.role === "onca" ? "text-card-signal" : "text-card-faint"
-                    )}
-                  >
-                    {line.role}
-                  </span>
-                ) : null}
-                {line.text}
-              </p>
-            ))}
+            {tab === "oracle" ? (
+              <OracleReadout />
+            ) : (
+              pane.lines.map((line, i) => (
+                <p
+                  key={i}
+                  className={cn(
+                    "[overflow-wrap:anywhere]",
+                    line.dim && "pl-[3.6rem] text-card-faint",
+                    !line.dim && "text-card-ink/90"
+                  )}
+                >
+                  {line.role ? (
+                    <span
+                      className={cn(
+                        "inline-block w-[3.6rem] shrink-0",
+                        line.role === "onca" ? "text-card-signal" : "text-card-faint"
+                      )}
+                    >
+                      {line.role}
+                    </span>
+                  ) : null}
+                  {line.text}
+                </p>
+              ))
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
