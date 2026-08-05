@@ -107,8 +107,69 @@ fn short(device: &str) -> &str {
     &device[..device.len().min(4)]
 }
 
+/// Now as an ISO-8601 UTC string (`YYYY-MM-DDTHH:MM:SSZ`), so we can compare it
+/// lexically against a market's `closeTime` and tell open from closed without a
+/// date crate (Howard Hinnant's civil-from-days for the date part).
+fn now_iso() -> String {
+    let secs = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0) as i64;
+    let (days, tod) = (secs / 86400, secs % 86400);
+    let (h, mi, s) = (tod / 3600, (tod % 3600) / 60, tod % 60);
+    let z = days + 719468;
+    let era = (if z >= 0 { z } else { z - 146096 }) / 146097;
+    let doe = z - era * 146097;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = yoe + era * 400 + if m <= 2 { 1 } else { 0 };
+    format!("{y:04}-{m:02}-{d:02}T{h:02}:{mi:02}:{s:02}Z")
+}
+
+/// Find the current open "Highest temperature in São Paulo" market so the demo
+/// never goes stale — the daily market rolls over at 12:00 UTC. Picks the
+/// soonest-closing market whose close date is today or later.
+fn find_open_market() -> Result<String, String> {
+    let url = format!("{JUP}/events/search?query=highest%20temperature%20Sao%20Paulo&limit=40");
+    let body: Value = match ureq::get(&url).call() {
+        Ok(r) => r.into_json().map_err(|e| e.to_string())?,
+        Err(e) => return Err(e.to_string()),
+    };
+    let now = now_iso();
+    let mut best: Option<(String, String)> = None; // (closeTime, eventId)
+    for e in body["data"].as_array().ok_or("no data")? {
+        let md = &e["metadata"];
+        let title = md["title"].as_str().unwrap_or("");
+        if !title.contains("Sao Paulo") || !title.to_lowercase().contains("temperature") {
+            continue;
+        }
+        let close = md["closeTime"].as_str().unwrap_or("");
+        if close < now.as_str() {
+            continue; // already closed
+        }
+        let id = e["eventId"].as_str().unwrap_or("").to_string();
+        match &best {
+            Some((bc, _)) if close >= bc.as_str() => {} // keep the soonest-closing open market
+            _ => best = Some((close.to_string(), id)),
+        }
+    }
+    best.map(|(_, id)| id).ok_or_else(|| "no open São Paulo temperature market found".into())
+}
+
 fn main() {
-    let event_id = arg("--event", "POLY-798942");
+    // No --event: auto-find today's open São Paulo market so the demo never
+    // points at a market that already closed.
+    let event_id = {
+        let e = arg("--event", "");
+        if e.is_empty() {
+            match find_open_market() {
+                Ok(id) => { println!("auto-selected open market: {id}"); id }
+                Err(err) => { eprintln!("could not auto-find an open São Paulo market: {err}\n  pass one with --event <POLY-…>"); std::process::exit(1); }
+            }
+        } else {
+            e
+        }
+    };
     let devices = arg("--devices", DEFAULT_DEVICES);
     let sensor = arg("--sensor", "dht11-a");
     let tolerance: f64 = arg("--tolerance", "5.0").parse().unwrap_or(5.0);
