@@ -48,7 +48,6 @@ and the threat model for the whole suite.
 
 | Component | Tier | Holds | What it does |
 |---|---|---|---|
-| [`onca-core`](crates/onca-core) | — | nothing | The shared Solana library: base58, pubkey, JSON-RPC, amount math, hand-rolled transaction assembly (memo, System Transfer, durable nonce), and the mesh aggregation with a reputation layer. Pure Rust, no input or output. Everything uses it. |
 | [`depin-attest`](plugins/depin-attest) | T1 | nothing | Turns a sensor reading into an unsigned attestation transaction with a replay guard. A ZeroClaw device becomes a Solana-reporting DePIN node. |
 | [`onca-signer`](tools/onca-signer) | — | device key | The human-disposes side: holds the device key the agent never sees, rebuilds the approved attestation, signs it, and submits. Run by a person, not the agent. |
 | [`mesh-oracle`](plugins/mesh-oracle) / [`onca-oracle`](tools/onca-oracle) | T0 | RPC key | Reads the mesh of on-chain attestations and settles on the median: outliers dropped, quorum required, and repeat liars frozen out on persistent reputation. |
@@ -60,6 +59,7 @@ and the threat model for the whole suite.
 | [`solana-pay-request`](plugins/solana-pay-request) | T1 | nothing | Turns a request such as "charge table 4 for 25 USDC" into a Solana Pay URL and QR code. A person signs it. |
 | [`token-risk-check`](plugins/token-risk-check) | T0 | RPC key | Reads a mint and gives a red, amber, or green verdict: authorities, Token-2022 traps, and holder concentration. |
 | [`payment-watch`](plugins/payment-watch) | T0 | RPC key | Watches a Solana Pay reference and confirms that an invoice was paid: the right amount, to the right wallet. |
+| [`onca-core`](crates/onca-core) | — | nothing | The shared Solana library every tool sits on: base58, pubkey, JSON-RPC, amount math, hand-rolled transaction assembly (memo, System Transfer, durable nonce), and the mesh aggregation with a reputation layer. Pure Rust, no input or output. |
 
 Read the tiers this way. A T0 tool reads and reports. A T1 tool builds a request
 that a person signs. Onca has no T2 tool. A T2 tool signs and sends. That tier

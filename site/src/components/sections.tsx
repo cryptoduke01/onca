@@ -82,6 +82,40 @@ export function CustodySection() {
 export function ToolsSection() {
   const tools = [
     {
+      name: "depin-attest",
+      tier: "T1",
+      body: "Turns a sensor reading into an unsigned attestation transaction with a monotonic replay guard. A ZeroClaw device becomes a Solana-reporting node.",
+      sample: `esp32  dht11-a → 23.4°C
+onca   Attestation #42
+       seq must increase`,
+    },
+    {
+      name: "onca-oracle",
+      tier: "T0",
+      body: "Reads the mesh of on-chain attestations and settles on the median. Outliers drop, quorum guards, and a node that keeps lying is frozen out on reputation, so a minority cannot move the number.",
+      sample: `onca  ORACLE 23.4°C
+      3 of 4 nodes agree
+      liar 999 → frozen`,
+      reverse: true,
+    },
+    {
+      name: "onca-market",
+      tier: "T0",
+      body: "Settles a live Solana weather market on the mesh. It reads a real Polymarket market off Jupiter and picks the winning outcome from the mesh value, not the single station the market ships with.",
+      sample: `market  Sao Paulo temp?
+onca    mesh 23.4°C → 23°C
+        no single source`,
+    },
+    {
+      name: "onca-x402",
+      tier: "T0",
+      body: "Sells the trusted value over x402. Answers 402, verifies the Solana payment landed, then returns the reading. A prediction market pays per call and settles on the answer.",
+      sample: `caller  GET /oracle → 402
+        pays 0.001 SOL
+onca    200 · 23.4°C`,
+      reverse: true,
+    },
+    {
       name: "solana-pay-request",
       tier: "T1",
       body: "Turns a sentence into a Solana Pay URL and QR. Mint allowlist and max amount live in code, so the model cannot widen them.",
@@ -106,41 +140,15 @@ onca  solana:7xKX…?amount=25
       from 9WzD…AWWM
       tx 5Q54…ge4j`,
     },
-    {
-      name: "depin-attest",
-      tier: "T1",
-      body: "Turns a sensor reading into an unsigned attestation transaction with a monotonic replay guard. A ZeroClaw device becomes a Solana-reporting node.",
-      sample: `esp32  dht11-a → 23.4°C
-onca   Attestation #42
-       seq must increase`,
-      reverse: true,
-    },
-    {
-      name: "onca-oracle",
-      tier: "T0",
-      body: "Reads the mesh of on-chain attestations and settles on the median. Outliers drop, quorum guards, and a node that keeps lying is frozen out on reputation, so a minority cannot move the number.",
-      sample: `onca  ORACLE 23.4°C
-      3 of 4 nodes agree
-      liar 999 → frozen`,
-    },
-    {
-      name: "onca-x402",
-      tier: "T0",
-      body: "Sells the trusted value over x402. Answers 402, verifies the Solana payment landed, then returns the reading. A prediction market pays per call and settles on the answer.",
-      sample: `caller  GET /oracle → 402
-        pays 0.001 SOL
-onca    200 · 23.4°C`,
-      reverse: true,
-    },
   ];
 
   return (
     <section id="tools" className="scroll-mt-28 py-24 sm:py-28">
       <div className="mx-auto max-w-5xl px-6 sm:px-8">
         <h2 className="max-w-xl text-[clamp(1.85rem,4vw,2.85rem)] font-semibold leading-[1.08] tracking-tight text-ink">
-          Ask. Confirm. Report.
+          Attest. Aggregate. Settle.
           <br />
-          <span className="text-ink-dim">Stay out of traps.</span>
+          <span className="text-ink-dim">No single source to bribe.</span>
         </h2>
 
         <div className="mt-16 space-y-0">
