@@ -54,6 +54,17 @@ change. The interface is still marked experimental and has no `.frozen` marker.
 When upstream changes the ABI, the plan is to copy the new interface and build
 again.
 
+It moved twice, both times in `logging.wit`, and both times it was a single enum
+variant. At v0.8.3 the host had a `memory-audit` variant our vendored copy
+lacked, so the component was discovered but failed to instantiate ("no matching
+implementation in the linker", `registered: 0`) until we added it. At v0.8.4 the
+plugins repo **removed** `memory-audit` again, so a plugin built against the
+0.8.3 WIT would not load on a 0.8.4 host. The fix each time is the same: diff
+`wit/v0` against `zeroclaw-labs/zeroclaw-plugins`, copy the changed file, rebuild
+the component. `tool.wit` and `types.wit` (the tool-plugin world we implement)
+have stayed stable across both releases — only the logging enum churned. The
+lesson: pin the WIT to the exact host you run, and diff it on every host bump.
+
 ## The output is a component, not a module
 
 Run `cargo build --target wasm32-wasip2 --release` on a library with
