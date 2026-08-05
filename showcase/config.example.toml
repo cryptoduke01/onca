@@ -23,6 +23,17 @@ min_reading = "-40"
 max_reading = "85"
 min_seq = "0"
 
+# ── The read side: mesh-oracle (Tier 3, custody T0 — reads the mesh, holds no key)
+[[plugins.entries]]
+name = "mesh-oracle"
+
+[plugins.entries.config]
+# The independent nodes whose on-chain attestations the mesh aggregates.
+devices = "<PUBKEY1>,<PUBKEY2>,<PUBKEY3>,<PUBKEY4>"
+sensor = "dht11-a"
+tolerance = "5"
+quorum = "3"
+
 # ── The model. api_key is injected via
 #    ZEROCLAW_providers__models__groq__default__api_key
 [providers.models.groq.default]
@@ -33,15 +44,20 @@ model = "llama-3.3-70b-versatile"
 model_provider = "groq.default"
 risk_profile = "onca"
 channels = ["telegram.main"]
+# The Tier-1 skill that settles a live Jupiter weather market on the mesh (see SETUP.md).
+skill_bundles = ["onca"]
 
 # ── Custody: supervised autonomy + forced approval on every attestation.
 [risk_profiles.onca]
 level = "supervised"
 # Least privilege: the agent sees only this one tool. Also keeps each request
 # under Groq's free-tier token-per-minute limit (bounty trap #3: don't flood context).
-allowed_tools = ["depin_attest"]
+allowed_tools = ["depin_attest", "mesh_oracle", "http_request"]
 # Every depin_attest call pauses for a human tap-to-approve in Telegram.
 always_ask = ["depin_attest"]
+# Reads need no tap: the mesh read (mesh_oracle) and the live market read
+# (Jupiter over the built-in http_request), which the settle-weather skill uses.
+auto_approve = ["mesh_oracle", "http_request"]
 
 # ── The channel. bot_token is injected via
 #    ZEROCLAW_channels__telegram__main__bot_token

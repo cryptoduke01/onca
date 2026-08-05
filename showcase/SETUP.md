@@ -106,6 +106,58 @@ It reads each device's latest on-chain attestation, drops outliers (a lying or
 broken node), and prints the median the market settles on. A single corrupted
 node cannot move it.
 
+## 8. Settle a live prediction market on the mesh
+
+`onca-market` reads a live weather market from Jupiter's keyless prediction API
+(Polymarket liquidity routed onto Solana) and settles which outcome the mesh
+picks, instead of the single weather station the market settles on. With no
+`--event` it auto-finds the current open São Paulo market:
+
+```bash
+cargo build --release --manifest-path tools/onca-market/Cargo.toml
+tools/onca-market/target/release/onca-market
+```
+
+The agent can do this itself on the channel, via a Tier-1 skill (no compiled
+code) that composes the built-in `http_request` with the `mesh_oracle` tool:
+
+```bash
+zeroclaw skills bundle add onca
+cp -r skills/settle-weather-market ~/.zeroclaw/shared/skills/onca/
+```
+
+Then in `~/.zeroclaw/config.toml`: `[agents.onca] skill_bundles = ["onca"]`, add
+`"http_request"` to `allowed_tools`, and add `"http_request"` + `"mesh_oracle"`
+to `auto_approve` (reads need no tap). Restart the daemon and message it:
+*"settle the São Paulo weather market on our mesh."*
+
+## 9. The x402 machine-commerce loop
+
+The oracle can also sell its reading over x402: a caller pays a micro-fee on
+Solana, and only then gets the value.
+
+```bash
+cargo build --release --manifest-path tools/onca-x402/Cargo.toml
+cargo build --release --manifest-path tools/onca-resolve/Cargo.toml
+# provider (sells the reading):
+tools/onca-x402/target/release/onca-x402 --treasury <pubkey> --price 1000000 \
+  --devices "<pk1>,<pk2>,<pk3>,<pk4>" --sensor dht11-a
+# consumer (pays, reads back, settles) in another shell:
+tools/onca-resolve/target/release/onca-resolve --treasury <pubkey> --price 1000000 \
+  --question "temperature over threshold" --op gt --threshold 25
+```
+
+## 10. Build an unsigned order (custody T1)
+
+To act on the settled outcome, `onca-trade` asks Jupiter to build an order on the
+winning bucket and prints the **unsigned** transaction a human signs. It holds no
+key and fails closed without USDC.
+
+```bash
+cargo build --release --manifest-path tools/onca-trade/Cargo.toml
+tools/onca-trade/target/release/onca-trade --market <winning marketId> --owner <pubkey> --amount 5
+```
+
 ## Hardware (optional)
 
 An ESP32 + DHT11 running [`firmware/onca-dht11`](../plugins/depin-attest/firmware/onca-dht11)
