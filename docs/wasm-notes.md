@@ -54,16 +54,19 @@ change. The interface is still marked experimental and has no `.frozen` marker.
 When upstream changes the ABI, the plan is to copy the new interface and build
 again.
 
-It moved twice, both times in `logging.wit`, and both times it was a single enum
-variant. At v0.8.3 the host had a `memory-audit` variant our vendored copy
-lacked, so the component was discovered but failed to instantiate ("no matching
-implementation in the linker", `registered: 0`) until we added it. At v0.8.4 the
-plugins repo **removed** `memory-audit` again, so a plugin built against the
-0.8.3 WIT would not load on a 0.8.4 host. The fix each time is the same: diff
-`wit/v0` against `zeroclaw-labs/zeroclaw-plugins`, copy the changed file, rebuild
-the component. `tool.wit` and `types.wit` (the tool-plugin world we implement)
-have stayed stable across both releases — only the logging enum churned. The
-lesson: pin the WIT to the exact host you run, and diff it on every host bump.
+The churn is always in `logging.wit`, in the `log-record` action enum, and there
+is a trap: **there are two copies of `wit/v0` upstream and they disagree.** The
+runtime (`zeroclaw-labs/zeroclaw`) ships its own `wit/v0`, and the
+`zeroclaw-labs/zeroclaw-plugins` repo ships another. The runtime is the one that
+links your component at instantiation, so it is the only authority. At v0.8.4 the
+plugins repo's `logging.wit` had 37 enum names (no `memory-audit`) while the
+runtime's had 38 (with it). A plugin vendored from the plugins repo failed to
+instantiate on the real host: "component imports instance
+`zeroclaw:plugin/logging@0.1.0` ... expected enum of 38 names, found 37 names."
+The fix is to vendor `wit/v0` from the **exact runtime you build the host from**
+(`/tmp/zeroclaw-084/wit/v0`), never the plugins repo, and re-diff it on every host
+bump. `tool.wit` and `types.wit` (the tool-plugin world we implement) have stayed
+stable across 0.8.3 and 0.8.4 — only the logging enum and `channel.wit` moved.
 
 ## The output is a component, not a module
 
