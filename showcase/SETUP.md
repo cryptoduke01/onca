@@ -66,7 +66,11 @@ and replace `<DEVICE_PUBKEY>` with `$DEVICE`.
 ## 5. Run the agent
 
 ```bash
-source ~/.onca/groq.env ~/.onca/telegram.env
+# Source each env file separately — `source a b` only reads the first file
+# (the second is passed as an argument), which leaves the bot token empty and
+# an empty override silently clobbers the config token → Telegram 404.
+source ~/.onca/groq.env
+source ~/.onca/telegram.env
 export ZEROCLAW_providers__models__groq__default__api_key="$GROQ_API_KEY"
 export ZEROCLAW_channels__telegram__main__bot_token="$TELEGRAM_BOT_TOKEN"
 $ZC daemon --host 127.0.0.1 --port 42617
