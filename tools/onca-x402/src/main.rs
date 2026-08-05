@@ -102,7 +102,7 @@ fn reply(status: u16, body: Value) -> Response<std::io::Cursor<Vec<u8>>> {
 }
 
 fn main() {
-    let rpc_url = arg("--rpc", "https://api.devnet.solana.com");
+    let rpc_url = arg("--rpc", &std::env::var("ONCA_RPC").unwrap_or_else(|_| "https://api.devnet.solana.com".to_string()));
     let treasury = arg("--treasury", "");
     let price: u64 = arg("--price", "1000000").parse().unwrap_or(1_000_000); // 0.001 SOL demo
     let devices: Vec<String> = arg("--devices", "").split(',').filter(|s| !s.is_empty()).map(str::to_string).collect();

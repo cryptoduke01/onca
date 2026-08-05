@@ -40,7 +40,9 @@ fn arg(flag: &str, default: &str) -> String {
 
 fn rpc(method: &str, params: Value) -> Value {
     let body = json!({"jsonrpc": "2.0", "id": 1, "method": method, "params": params});
-    match ureq::post(RPC).send_json(body) {
+    // Point at a pro endpoint (Helius/Solami/etc.) with ONCA_RPC; defaults to public devnet.
+    let url = std::env::var("ONCA_RPC").unwrap_or_else(|_| RPC.to_string());
+    match ureq::post(&url).send_json(body) {
         Ok(r) => r.into_json().unwrap_or_else(|e| json!({"error": e.to_string()})),
         Err(ureq::Error::Status(code, r)) => r.into_json().unwrap_or_else(|_| json!({"error": format!("HTTP {code}")})),
         Err(e) => json!({"error": e.to_string()}),

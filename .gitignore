@@ -3,3 +3,4 @@
 *.wasm
 *.cwasm
 .DS_Store
+.claude/
