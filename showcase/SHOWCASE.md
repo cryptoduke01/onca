@@ -90,6 +90,23 @@ CONDITION   temp gt 25
 SETTLEMENT  NO
 ```
 
+**Settling a REAL live market on the mesh, not a single source.** This is Kaue's
+exact ask, closed against a market that exists today. `onca-market` reads a live
+**weather** market from Jupiter's keyless prediction API — Polymarket liquidity
+routed onto Solana, in São Paulo — and settles which outcome the mesh picks,
+instead of the single oracle the market ships with (the Polymarket
+single-source manipulation Kaue named):
+
+```
+MARKET   POLY-798942  "Highest temperature in Sao Paulo on August 6?"  (live, 11 buckets)
+MESH     node BtpD signs 999 → FROZEN OUT;  3 nodes agree
+SETTLE   Onca mesh 23.4 C → winning outcome "23°C"  — no single source set it
+```
+
+To actually trade the outcome, Jupiter's `POST /orders` returns an **unsigned**
+transaction a human signs — the same T1 ladder `onca-signer` runs. The agent
+holds no key.
+
 ## Custody ladder
 
 | Tier | Meaning | In Onca |
@@ -161,6 +178,9 @@ Agent: The sensor reading of 999 C is above the configured maximum of 85 C,
   verify the Solana payment landed, then return the mesh reading. Replay-guarded.
 - **`onca-resolve`** — the consumer: pays the x402 fee (a real transfer built and
   signed with `onca-core`), reads the value back, and settles a market YES/NO.
+- **`onca-market`** — settles a **live** Solana prediction market: reads a real
+  weather market from Jupiter's keyless prediction API (Polymarket liquidity on
+  Solana) and maps the mesh value to the winning outcome bucket. Tier 1 read.
 - **ESP32 firmware + serial bridge** — a DHT11 node printing `onca:reading` lines
   the pipeline ingests. The software loop runs identically with a typed reading,
   so the demo does not depend on hardware.
