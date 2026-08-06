@@ -52,6 +52,7 @@ it, with no key ever leaving either tool.
 Human-approved attestations, signed by the device key, finalized on Solana. Each
 started as a Telegram approval tap and was landed by the human-run signer:
 
+- [`onca:attest s=dht11-a v=24 u=C seq=9`](https://explorer.solana.com/tx/3dCBB2Vzoi3GE3FD2ALBqfMSPdn8z9UF95VYeGTG1B5DH1eB2cmPKiy7sWrRMzZ235b6FqneTDAadVFwtvTBsHL3?cluster=devnet)
 - [`onca:attest s=dht11-a v=23.7 u=C seq=7`](https://explorer.solana.com/tx/TntBSvQGSuzVscVU633q6Fjhnfbqk7jBRzfTz48r2ZwfeswLGqQjDbV8zjeNsaZrmxPLXGzmyVVXShQj9DXg2GE?cluster=devnet)
 - [`onca:attest s=dht11-a v=24.1 u=C seq=2`](https://explorer.solana.com/tx/5ATMiYLVGunuuZUa1F2svs1cKaoezm7NYkEsQeCzzozpymAr4Gvq9A1jHUAT3jTE6r4hTGfV4cXFeyPi9ZpEQX9z?cluster=devnet)
 - [`onca:attest s=dht11-a v=22.8 u=C seq=3`](https://explorer.solana.com/tx/4zcKbaX8WrPr4vEVWsmFYZ84wyEeiuE1HvpwskWbUM2X6FsTe3Yd1cShuPutPKt2ujgwy1HR6JR1nkeUyNJA3QEN?cluster=devnet)
@@ -107,6 +108,34 @@ The market names its own single source. Its resolution rule, verbatim from
 Jupiter: *"the highest temperature recorded at the São Paulo-Guarulhos
 International Airport Station."* One station, one reading, one point to
 manipulate. Onca settles the same market on a mesh of independent nodes instead.
+
+**And the agent does it live, in chat.** You message the Telegram bot "settle the
+São Paulo weather market" and it reads the mesh, drops the liar, and replies with
+a settlement card — the market title, a clickable Polymarket link, each node's
+reading (three counted, the 999 node frozen), the trusted value, and the winning
+bucket:
+
+```
+🐆 Onca Oracle · Settlement
+Highest temperature in Sao Paulo on August 6?
+🔗 https://polymarket.com/event/highest-temperature-in-sao-paulo-on-august-6-2026
+
+Mesh · 4 independent nodes
+✅ 3xQ3…  23.4°C
+✅ Ghri…  23.6°C
+✅ AxRK…  23.1°C
+❌ BtpD…   999°C  frozen
+
+Trusted value · 23.4°C · 3 agreed, 1 rejected
+🏆 Winning outcome · 23°C
+
+No single source set this. Corrupt a minority, the median holds.
+```
+
+The agent holds no key. It reads and settles over the host's HTTP; it never
+signs. Attestations that write to the chain always stop at a human tap, and the
+bot hands the operator the exact `onca-signer` command to land it — the key never
+touches the agent.
 
 **And the agent does this itself, on the channel — not a script.** A ZeroClaw
 Tier-1 skill ([`skills/settle-weather-market`](../skills/settle-weather-market/SKILL.md))
