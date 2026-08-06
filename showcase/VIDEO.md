@@ -1,107 +1,126 @@
-# Onca — 3-minute showcase script (shot-by-shot)
+# Onca — 3-minute demo (premium cut)
 
-Terminal + phone, no slides. Total target: under 3:00. Read the narration
-naturally, do not read it word for word. Everything below actually runs.
+Terminal + phone, no slides. Everything below is real and pre-verified. The goal
+is *clean and smooth*: no fumbling, no dead air, every command already on the
+clipboard. Read the narration naturally, don't recite it.
 
-**Honesty guardrail (say this, do not fudge it):** our devnet mesh nodes and the
-DHT11 are the *mechanism*. In production the nodes sit where the market is (São
-Paulo); here our nodes drive the same end-to-end settlement. Do not imply a Jos
-sensor is measuring São Paulo weather. Show the mechanism, claim only that.
+## Before you hit record (5-minute setup)
 
-Before recording, grab today's open São Paulo market (the daily one rolls over at
-12:00 UTC):
+- **Bot is live.** Daemon running on the 0.8.4 host, on Claude. Test it once in a
+  fresh chat, then leave that chat clean for the take.
+- **Fresh Telegram chat.** Delete the old Onca thread or start clean so no past
+  messages are on screen. History is already wiped server-side.
+- **Terminal, made for camera:** one window, dark theme, font bumped to ~16–18pt,
+  prompt short (`cd` into the repo first so the path is short). Clear it (`Cmd+K`)
+  right before each terminal scene.
+- **Phone in frame.** Mirror the phone into the same recording: QuickTime →
+  New Movie Recording → select your iPhone as the camera (cable). Crisp, and it
+  lives in one screen capture so there's nothing to composite.
+- **Recorder:** QuickTime or `Cmd+Shift+5`, whole screen, 1080p+. If you can,
+  60fps — the card and the animations read smoother.
+- **Clipboard loaded.** Copy the three commands below into a notes app so each
+  paste is one keystroke on camera. Never type a long command live.
+- **Pick a fresh sequence number.** Last on-chain was seq 9/10 — use **11**.
 
-```bash
-curl -s "https://api.jup.ag/prediction/v1/events/search?query=highest%20temperature%20Sao%20Paulo&limit=20" | python3 -c "import sys,json;[print(e['eventId'], e['metadata']['title']) for e in json.load(sys.stdin)['data'] if 'Sao Paulo' in e['metadata']['title']]"
+## The three commands (pre-copy these)
+
 ```
-
-Use that `POLY-…` id as `--event` in scene 4.
+cd /Users/duke/Desktop/Projects/workspace/zeroclaw-solana
+```
+```
+tools/onca-signer/target/release/onca-signer --sensor dht11-a --value 24 --unit C --seq 11
+```
+```
+tools/onca-market/target/release/onca-market
+```
 
 ---
 
-## Scene 1 — the problem (0:00–0:20)
+## Scene 1 — The problem (0:00–0:15)
 
-On screen: the live market in a browser or the `onca-market` header in the terminal.
+On screen: the live Polymarket market in a browser (or the `onca-market` header).
 
-> "Prediction markets settle on data. A market that settles on one oracle is a
-> market you can rob. That is the Polymarket manipulation. Here is a live weather
-> market on Solana, and here is how you settle it with no single source to bribe."
+> "Prediction markets pay out on real-world data. This São Paulo weather market
+> settles on one weather station. One source. Control it and you control the
+> payout — that's the manipulation that's burned Polymarket. Here's the fix."
 
-## Scene 2 — the agent, on a real channel (0:20–1:10)
+Keep it to two breaths. Don't over-explain.
 
-On screen: phone, Telegram DM with the Onca bot. (Daemon already running.)
+## Scene 2 — The agent, on your phone (0:15–1:00)
 
-Type in Telegram:
+On screen: the phone, fresh chat with the Onca bot.
 
-> Attest a reading from dht11-a: 23.7 C, sequence 8
+Type: **`Attest a reading from dht11-a: 24 C, sequence 11`**
 
-The approval card appears (Tool: depin_attest, reading 23.7, seq 8). Tap **Approve**.
+The approval card appears (depin_attest, reading 24, seq 11). Pause on it.
 
-> "This is a self-hosted ZeroClaw agent in my Telegram. It does not hold a key. It
-> builds an unsigned attestation and stops at a human tap. I approve, and it hands
-> back the unsigned transaction. The agent proposes, I dispose."
+> "This is a self-hosted ZeroClaw agent in my Telegram. It holds no key. It builds
+> an unsigned attestation and stops at a human tap."
 
-## Scene 3 — land it on-chain (1:10–1:35)
+Tap **Approve**. It replies: *Attestation built — unsigned and ready*, with the
+exact signer command in a copy block.
 
-On screen: terminal.
+> "Approved. It hands me the command to land it — the key never touches the agent.
+> I dispose."
 
-```bash
-tools/onca-signer/target/release/onca-signer --sensor dht11-a --value 23.7 --unit C --seq 8
-```
+## Scene 3 — On-chain, in one paste (1:00–1:25)
 
-> "The signer holds the device key the agent never sees. It signs the exact
-> reading I approved and lands it on devnet."
+On screen: terminal (cleared). Paste command #2, Enter.
 
-Click the explorer link. Show the `onca:attest` memo on-chain.
+> "The signer holds the device key. It signs the exact reading I approved and
+> lands it on devnet."
 
-## Scene 4 — the mesh settles a REAL market (1:35–2:30) ← the payoff
+It prints `SUBMITTED` + an Explorer link. Click it. Show the `onca:attest` memo on
+Solana Explorer for a beat.
 
-On screen: terminal. Use today's open event id.
+> "On-chain. That's one node reporting."
 
-```bash
-tools/onca-market/target/release/onca-market --event POLY-798942
-```
+## Scene 4 — The mesh catches a liar (1:25–2:20) — the payoff
 
-> "Now the read side. Four independent nodes attested on-chain. One is an
-> attacker signing 999 degrees, straight to the chain, past the honest agent.
-> The mesh takes the median, drops the outlier, and freezes the liar on
-> reputation, so even a plausible lie from it later is ignored. That trusted
-> value maps to the winning outcome on the live São Paulo market. No single
-> source set it. To move it you would have to corrupt a majority of independent
-> nodes, not one box on one desk."
+On screen: back to the phone.
 
-Point at `FROZEN OUT` and the winning bucket.
+Type: **`settle the São Paulo weather market`**
 
-## Scene 5 — machine commerce, optional (2:30–2:50)
+Let the card land. Don't talk over the reveal.
 
-Two terminals. Left: the paid oracle. Right: a resolver paying for the read.
+> "Now settle a live market on the mesh. Four independent nodes. One is lying —
+> 999 degrees, signed straight to the chain, past the honest agent."
 
-```bash
-# left
-tools/onca-x402/target/release/onca-x402 --treasury BMpwFSKbLJvPpK4yo5EoqBiQUDxt9NdgFRToXJpiphrC --price 1000000 --devices "3xQ33DfPLL6py9zCZAm4CfowL6TPZbiMNJrBRPudhSNR,GhriBBob3iUczrGR81mXaKQ9LJBpF2STU8uEnVZLoX9a,AxRKqyyT9DXbKGMf47ULRCEqwRPQgCa1nX1UdVNTGQGh,BtpDcpYMfeZa6MtwFX6VeAnHjyq6qqh9V2X86oKQdUDy" --sensor dht11-a
-# right
-tools/onca-resolve/target/release/onca-resolve --treasury BMpwFSKbLJvPpK4yo5EoqBiQUDxt9NdgFRToXJpiphrC --price 1000000 --question "Sao Paulo temp bucket" --op gt --threshold 25
-```
+Point at the card as you read it:
 
-> "The oracle also sells its reading over x402. An agent pays a micro-fee on
-> Solana, and only then gets the value. Sell your capability, pay for data, all
-> under a cap."
+> "The mesh takes the median, drops the liar, freezes it on reputation, and
+> settles on the honest three — 23 degrees. There's the live Polymarket link. No
+> single source set this number. To move it you'd have to corrupt a majority of
+> independent nodes, not one box on one desk."
 
-## Scene 6 — close (2:50–3:00)
+## Scene 5 — The product (2:20–2:45)
 
-On screen: the custody table or the repo.
+On screen: [onca.run](https://onca.run) (or localhost). Slow scroll from the hero
+("The agent proposes. You dispose.") down to the settlement section.
 
-> "No tool in the agent holds a spending key. Read and build only, T0 and T1.
-> Prompt-injection tested, fails closed. Config and runbook are in the repo. You
-> can set this up in an evening. That is Onca."
+> "It's a real suite — the tools read the chain or build a request a human signs.
+> Never a key that can spend."
+
+## Scene 6 — Close (2:45–3:00)
+
+On screen: the custody line, or the repo.
+
+> "Custody tier T0 and T1. Fails closed, prompt-injection tested, no key in the
+> agent. Set it up in an evening. That's Onca — prediction markets that can't be
+> rigged, because no single source sets the number."
 
 ---
 
-## Pre-flight checklist
+## Smoothness checklist (this is what makes it feel premium)
 
-- [ ] Daemon running: `zeroclaw daemon --host 127.0.0.1 --port 42617` (with Groq + Telegram env exported)
-- [ ] Telegram chat already bound (bot replies)
-- [ ] Device funded (signer scene): `solana balance <device> --url devnet`
-- [ ] Fresh open São Paulo event id for scene 4
-- [ ] Port 8402 free for scene 5 (`lsof -iTCP:8402`)
-- [ ] Screen recorder + phone mirror ready
+- **Never type a long command** — paste. Type only the short Telegram messages.
+- **Let reveals breathe** — the approval card, the settlement card, the Explorer
+  page each get ~2 seconds of silence. Rushing reads as nervous.
+- **Cut the wait** — the bot takes ~5–10s to reply. In the edit, trim that to ~1s
+  so it feels instant. That single cut is the difference between "demo" and
+  "product".
+- **One clean take per scene** beats one perfect long take. Record scenes
+  separately, stitch in the edit.
+- **No music with lyrics.** If you add a bed, keep it low and instrumental. The
+  bounty wants the real thing, not a hype reel.
+- **End on the winning card or the site**, not on a terminal prompt.
