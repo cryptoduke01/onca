@@ -10,7 +10,7 @@
 use std::collections::HashMap;
 
 use onca_core::mesh::{aggregate, parse_attest, Aggregate, NodeReading};
-use onca_core::rpc::{RpcClient, RpcTransport};
+use onca_core::rpc::RpcTransport;
 use serde_json::{json, Value};
 
 /// Operator-set mesh policy, read from the plugin's jailed config section.
@@ -109,29 +109,41 @@ pub fn read_oracle<T: RpcTransport>(
         .unwrap_or(&cfg.sensor)
         .to_string();
 
-    // One getSignaturesForAddress per node (Helius free tier rejects JSON-RPC
-    // batch). A couple of retries cover an occasional empty wasi:http response;
-    // a real endpoint like Helius answers each single call reliably (200). A
-    // node that stays unreachable is simply dropped — quorum guards settlement.
-    let client = RpcClient::new(rpc_url, transport);
+    // ONE JSON-RPC batch reads every node's signatures in a single HTTP call.
+    // The old per-node loop made up to 4 nodes x 4 retries = 16 sequential wasm
+    // HTTP calls, and `waki` drops the connection across them — intermittently
+    // returning zero nodes. A batch has no "later calls" to go stale. Batching
+    // needs a real RPC (Helius/Solami paid), not the rejecting free tier. A few
+    // retries still cover a transient wasi:http hiccup on the one call.
+    let batch: Vec<Value> = cfg
+        .devices
+        .iter()
+        .enumerate()
+        .map(|(i, device)| {
+            json!({"jsonrpc": "2.0", "id": i, "method": "getSignaturesForAddress", "params": [device, {"limit": 25}]})
+        })
+        .collect();
+    let body = Value::Array(batch).to_string();
+
     let mut readings = Vec::new();
-    for device in &cfg.devices {
-        // Each node's read is fault-tolerant: a transient wasi:http error or an
-        // empty answer just retries, and a node that never answers is dropped —
-        // one flaky node must never fail the whole oracle. Quorum guards the
-        // settlement against too many nodes going dark.
-        for _ in 0..4 {
-            let Ok(res) = client.call("getSignaturesForAddress", json!([device, {"limit": 25}])) else {
-                continue; // transient RPC error — retry this node
-            };
-            let sigs = res.as_array().cloned().unwrap_or_default();
+    for _ in 0..3 {
+        let Ok(resp) = transport.post_json(rpc_url, &body) else {
+            continue; // transient wasi:http error — retry the whole batch
+        };
+        let Ok(parsed) = serde_json::from_str::<Value>(&resp) else { continue };
+        let Some(items) = parsed.as_array() else { continue };
+        readings.clear();
+        for item in items {
+            // Map each response back to its device by the request id we set.
+            let Some(idx) = item["id"].as_u64().map(|n| n as usize) else { continue };
+            let Some(device) = cfg.devices.get(idx) else { continue };
+            let sigs = item["result"].as_array().cloned().unwrap_or_default();
             if let Some((value, seq, timestamp)) = pick_reading(&sigs, &sensor) {
                 readings.push(NodeReading { device: device.clone(), value, seq, timestamp });
-                break;
             }
-            if !sigs.is_empty() {
-                break; // a real answer, just no matching attestation
-            }
+        }
+        if !readings.is_empty() {
+            break;
         }
     }
     let agg = aggregate(&readings, cfg.tolerance, cfg.quorum);
