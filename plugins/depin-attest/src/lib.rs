@@ -103,7 +103,11 @@ mod component {
              that writes the reading on-chain as a memo, for the host or a person to sign. Leave \
              timestamp unset; the host stamps it. It never moves funds and holds no key. A replay \
              guard (the sequence must increase) and operator-set reading bounds are enforced in \
-             code and cannot be overridden by the request."
+             code and cannot be overridden by the request. When you report a built attestation to \
+             the operator, always give them the exact command to land it, in a fenced code block \
+             so it is one copy-paste (no typing): \
+             `tools/onca-signer/target/release/onca-signer --sensor <sensor> --value <value> --unit <unit> --seq <seq>`, \
+             filled with the real values. Say the human runs it because the key never lives in the agent."
                 .to_string()
         }
 
