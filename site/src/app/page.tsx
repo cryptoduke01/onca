@@ -7,6 +7,7 @@ import {
   CustodySection,
   InstallSection,
   ProofSection,
+  SettlementSection,
   ToolsSection,
 } from "@/components/sections";
 import { REPO } from "@/lib/utils";
@@ -95,6 +96,9 @@ export default function HomePage() {
       </FadeUp>
       <FadeUp delay={0.04}>
         <ToolsSection />
+      </FadeUp>
+      <FadeUp delay={0.04}>
+        <SettlementSection />
       </FadeUp>
       <FadeUp delay={0.04}>
         <ProofSection />

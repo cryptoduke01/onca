@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { REPO } from "@/lib/utils";
+import { cn, REPO } from "@/lib/utils";
 
 export function CustodySection() {
   const rungs = [
@@ -228,6 +228,128 @@ export function ProofSection() {
             charge 25 USDC
           </p>
           <p className="pl-[5.2rem] text-signal">ok · QR rendered</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function SettlementSection() {
+  const poly =
+    "https://polymarket.com/event/highest-temperature-in-sao-paulo-on-august-6-2026";
+  const nodes = [
+    { id: "3xQ3…", temp: "23.4", ok: true },
+    { id: "Ghri…", temp: "23.6", ok: true },
+    { id: "AxRK…", temp: "23.1", ok: true },
+    { id: "BtpD…", temp: "999", ok: false },
+  ];
+
+  return (
+    <section id="settle" className="scroll-mt-28 py-24 sm:py-28">
+      <div className="mx-auto max-w-5xl px-6 sm:px-8">
+        <div className="grid gap-12 lg:grid-cols-[0.92fr_1.08fr] lg:items-center lg:gap-16">
+          <div>
+            <h2 className="text-[clamp(1.85rem,4vw,2.85rem)] font-semibold leading-[1.08] tracking-tight text-ink">
+              One node lies.
+              <br />
+              <span className="text-ink-dim">The mesh doesn&rsquo;t flinch.</span>
+            </h2>
+            <p className="mt-5 max-w-md text-[1.05rem] leading-relaxed text-ink-dim">
+              A market that settles on one source is one you can rig. Onca settles
+              on a mesh of independent sensors: median, outliers dropped, repeat
+              liars frozen. You ask the agent in chat, and it does exactly this.
+            </p>
+            <p className="mt-4 max-w-md text-[0.98rem] leading-relaxed text-ink-dim">
+              Below is a real São Paulo weather market on{" "}
+              <a
+                href={poly}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-signal transition-colors duration-150 hover:text-signal-deep"
+              >
+                Polymarket
+              </a>
+              , settled on four nodes. One screams 999&deg;C. It gets dropped, and
+              the honest three still reach quorum.
+            </p>
+          </div>
+
+          {/* The card the agent replies with, on-brand. */}
+          <div className="edge rounded-2xl p-6 sm:p-7">
+            <div className="flex items-center gap-2 text-[0.9rem]">
+              <span className="text-signal" aria-hidden="true">
+                )))
+              </span>
+              <span className="font-medium text-ink">Onca Oracle</span>
+              <span className="text-ink-faint">· Settlement</span>
+            </div>
+
+            <p className="mt-4 text-[1rem] font-medium leading-snug text-ink">
+              Highest temperature in São Paulo on August 6?
+            </p>
+            <a
+              href={poly}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="data mt-1.5 inline-block max-w-full truncate text-[0.8rem] text-signal transition-colors duration-150 hover:text-signal-deep"
+            >
+              polymarket.com/event/highest-temperature-in-sao-paulo…
+            </a>
+
+            <p className="mt-6 text-[0.72rem] uppercase tracking-[0.12em] text-ink-faint">
+              Mesh · 4 independent nodes
+            </p>
+            <ul className="mt-2.5 space-y-2">
+              {nodes.map((n) => (
+                <li
+                  key={n.id}
+                  className={cn(
+                    "data flex items-center gap-3 text-[0.92rem]",
+                    n.ok ? "text-ink" : "text-ink-faint"
+                  )}
+                >
+                  <span
+                    className={cn("w-4 shrink-0", n.ok ? "text-ok" : "text-bad")}
+                    aria-hidden="true"
+                  >
+                    {n.ok ? "✓" : "✕"}
+                  </span>
+                  <span className="w-14 shrink-0 text-ink-dim">{n.id}</span>
+                  <span
+                    className={cn(
+                      "tabular-nums",
+                      !n.ok && "text-bad line-through decoration-bad/40"
+                    )}
+                  >
+                    {n.temp}&deg;C
+                  </span>
+                  {!n.ok && (
+                    <span className="text-[0.78rem] not-italic text-bad">frozen</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-5 border-t border-line pt-4">
+              <p className="text-[0.92rem] text-ink-dim">
+                Trusted value{" "}
+                <span className="data font-semibold tabular-nums text-ink">
+                  23.4&deg;C
+                </span>{" "}
+                · 3 agreed, 1 rejected
+              </p>
+              <p className="mt-1.5 text-[1rem]">
+                <span className="text-ink-dim">Winning outcome </span>
+                <span className="data font-semibold tabular-nums text-signal">
+                  23&deg;C
+                </span>
+              </p>
+            </div>
+
+            <p className="mt-4 text-[0.86rem] leading-relaxed text-ink-faint">
+              No single source set this. Corrupt a minority, the median holds.
+            </p>
+          </div>
         </div>
       </div>
     </section>
