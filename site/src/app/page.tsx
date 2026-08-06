@@ -57,7 +57,7 @@ export default function HomePage() {
                 href={REPO}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-9 inline-flex min-h-11 items-center gap-2 rounded-xl bg-btn px-5 text-[0.95rem] font-medium text-btn-ink transition-colors duration-200 hover:bg-btn-hover"
+                className="group mt-9 inline-flex min-h-11 items-center gap-2 rounded-xl bg-btn px-5 text-[0.95rem] font-medium text-btn-ink shadow-[0_10px_30px_-16px_rgba(0,0,0,0.6)] transition-[background-color,transform,box-shadow] duration-150 ease-out hover:-translate-y-px hover:bg-btn-hover hover:shadow-[0_16px_36px_-14px_rgba(110,168,255,0.42)] active:translate-y-0"
               >
                 Read the code
                 <svg
@@ -66,7 +66,7 @@ export default function HomePage() {
                   height="14"
                   fill="none"
                   aria-hidden="true"
-                  className="opacity-80"
+                  className="opacity-80 transition-transform duration-150 ease-out group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
                 >
                   <path
                     d="M4.5 11.5 11.5 4.5M6 4.5h5.5V10"
