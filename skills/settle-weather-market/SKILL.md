@@ -55,12 +55,23 @@ HTTP. (Do not use `mesh_oracle`; its in-sandbox HTTP client is flaky.)
    `https://polymarket.com/event/highest-temperature-in-sao-paulo-on-august-6-2026`.
    (This is the event's `metadata.slug`; construct it so you always have the link.)
 
-4. **Settle.** Round the mesh value to the nearest whole °C and pick the bucket
-   whose integer is closest to it. That bucket is the winning outcome.
+4. **Settle — but only if the market has closed.** Round the mesh value to the
+   nearest whole °C and pick the bucket whose integer is closest to it. That
+   bucket is the winning outcome. **Check the timing**: compare the event's
+   `metadata.closeTime` to now (UTC).
+   - If `closeTime` is **in the future**, the market is still open — the day's
+     high isn't final yet, so this is a **PREVIEW**, not a settlement. Use the
+     preview header and say the result is provisional.
+   - If `closeTime` is **in the past**, the event is final — use the settlement
+     header.
 
-5. **Reply with the Onca settlement card**, in exactly this shape (Telegram
-   Markdown), filled with the real values you computed. Nothing before or after
-   it, no preamble:
+5. **Reply with the Onca card**, in exactly this shape (Telegram Markdown),
+   filled with the real values you computed. Nothing before or after it, no
+   preamble. Use the first header if the market is still open, the second if it
+   has closed:
+
+   - open  → `🐆 *Onca Oracle · Preview*  _(market open — provisional)_`
+   - closed → `🐆 *Onca Oracle · Settlement*`
 
    ```
    🐆 *Onca Oracle · Settlement*
@@ -78,16 +89,20 @@ HTTP. (Do not use `mesh_oracle`; its in-sandbox HTTP client is flaky.)
    🏆 *Winning outcome* · `23°C`  (`<winning marketId>`)
 
    _No single source set this. Corrupt a minority, the median holds._
+   _Not financial advice — a fact for settlement, not a bet._
    ```
 
-   Use the real node short-ids (first 4 chars), each node's actual reading, a
-   ✅ for a counted node and a ❌ for a dropped/frozen one, and the true agreed
-   and rejected counts. The second line — `🔗 ` followed by the full
-   `https://polymarket.com/event/<slug>` URL you built in step 3 — is
-   **mandatory and must never be omitted**; it is the whole point of showing a
-   live market. Send **only** this card: no sentence before it, no explanation of
-   your steps after it. If the mesh lacked quorum, skip the card and say plainly
-   that the mesh could not reach quorum.
+   For an open market, change the header line as above and label the last data
+   line *Leading outcome* instead of *Winning outcome*. Use the real node
+   short-ids (first 4 chars), each node's actual reading, a ✅ for a counted node
+   and a ❌ for a dropped/frozen one, and the true agreed and rejected counts. The
+   second line — `🔗 ` followed by the full `https://polymarket.com/event/<slug>`
+   URL you built in step 3 — is **mandatory and must never be omitted**; it is the
+   whole point of showing a live market. Keep the closing two `_italic_` lines:
+   the anti-manipulation line and the not-financial-advice line. Send **only**
+   this card: no sentence before it, no explanation of your steps after it. If the
+   mesh lacked quorum, skip the card and say plainly that the mesh could not reach
+   quorum.
 
 ## Output discipline
 
@@ -96,8 +111,13 @@ Read only the fields you need and reply with just the card.
 
 ## Trading it (custody T1)
 
-If the user wants to *act* on the outcome, do not sign anything. Jupiter's
-`POST https://api.jup.ag/prediction/v1/orders` returns an **unsigned**
+A human *can* act on the mesh value — that's a fair use of a trustworthy number.
+But you never do it for them. If the user wants to trade, do not sign anything.
+Jupiter's `POST https://api.jup.ag/prediction/v1/orders` returns an **unsigned**
 transaction (it needs an `x-api-key` and the trader's wallet pubkey). Return that
 unsigned transaction for a human to sign with `onca-signer`. You hold no key and
 submit nothing.
+
+Always attach the disclaimer: **this is not financial advice.** The mesh reports
+a fact (the trusted reading), not a recommendation to bet. Whether to trade on it,
+and any loss, is entirely the human's decision and risk.

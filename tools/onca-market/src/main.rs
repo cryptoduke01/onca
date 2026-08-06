@@ -223,9 +223,22 @@ fn main() {
     // 3) Map the mesh value to the market's winning bucket.
     let rounded = value.round() as i64;
     let winner = buckets.iter().min_by_key(|b| (b.celsius - rounded).abs()).unwrap();
-    println!("\nSETTLEMENT");
-    println!("  Onca mesh value: {value} C  ({} of {} nodes trusted & agree)", agg.inliers.len(), readings.len());
-    println!("  winning outcome: \"{}\"  (market {})", winner.label, winner.market_id);
-    println!("  no single source set this — corrupting the settlement needs a majority of independent nodes.");
+
+    // A market that hasn't closed yet cannot be *settled* — the day's high isn't
+    // final until it closes. Show the live mesh value as a PREVIEW (what the
+    // resolver would commit at close), and only call it a SETTLEMENT once closed.
+    let is_open = !close.is_empty() && close.as_str() > now_iso().as_str();
+    if is_open {
+        println!("\nPREVIEW  (market still open until {close} — provisional, not final)");
+        println!("  Onca mesh value now: {value} C  ({} of {} nodes trusted & agree)", agg.inliers.len(), readings.len());
+        println!("  leading outcome: \"{}\"  (market {})", winner.label, winner.market_id);
+        println!("  final settlement fires after close, when the day's high is known.");
+    } else {
+        println!("\nSETTLEMENT");
+        println!("  Onca mesh value: {value} C  ({} of {} nodes trusted & agree)", agg.inliers.len(), readings.len());
+        println!("  winning outcome: \"{}\"  (market {})", winner.label, winner.market_id);
+        println!("  no single source set this — corrupting the settlement needs a majority of independent nodes.");
+    }
     println!("\n  To trade it: Jupiter POST /orders returns an UNSIGNED tx a human signs (T1) — the agent holds no key.");
+    println!("  Not financial advice — the mesh reports a fact, not a bet. Trading on it is a human's call and risk.");
 }
