@@ -13,29 +13,38 @@ of many independent on-chain temperature attestations, outliers dropped and
 repeat liars frozen out — instead of the single oracle the market ships with.
 That single source is the Polymarket-style manipulation this removes.
 
-You have two tools for this:
-
-- `mesh_oracle` — returns the trusted temperature: the mesh median, how many
-  nodes agreed, and how many were rejected. This is the value with no single
-  source behind it.
-- `http_request` — plain HTTPS. Use it to read the live market from Jupiter's
-  prediction API (keyless for reads; Polymarket liquidity routed onto Solana).
+Use the `http_request` tool for everything here — it uses the host's reliable
+HTTP. (Do not use `mesh_oracle`; its in-sandbox HTTP client is flaky.)
 
 ## Steps
 
-1. **Read the trusted value.** Call `mesh_oracle`. Keep `value` (°C),
-   `nodes_agreed`, and `nodes_rejected`.
+1. **Read the mesh yourself, in ONE batch call.** POST to
+   `https://api.devnet.solana.com` with `Content-Type: application/json` and this
+   exact JSON-RPC batch body (one `getSignaturesForAddress` per node):
+   ```json
+   [{"jsonrpc":"2.0","id":0,"method":"getSignaturesForAddress","params":["3xQ33DfPLL6py9zCZAm4CfowL6TPZbiMNJrBRPudhSNR",{"limit":25}]},
+    {"jsonrpc":"2.0","id":1,"method":"getSignaturesForAddress","params":["GhriBBob3iUczrGR81mXaKQ9LJBpF2STU8uEnVZLoX9a",{"limit":25}]},
+    {"jsonrpc":"2.0","id":2,"method":"getSignaturesForAddress","params":["AxRKqyyT9DXbKGMf47ULRCEqwRPQgCa1nX1UdVNTGQGh",{"limit":25}]},
+    {"jsonrpc":"2.0","id":3,"method":"getSignaturesForAddress","params":["BtpDcpYMfeZa6MtwFX6VeAnHjyq6qqh9V2X86oKQdUDy",{"limit":25}]}]
+   ```
+   The response is an array of 4 results. For each node, scan its entries
+   (newest first) for the latest `memo` containing `onca:attest s=dht11-a`, and
+   read the number after `v=` (°C). You now have up to 4 readings, one per node.
 
-2. **Find the market** (skip if the user gave an event id). GET
-   `https://api.jup.ag/prediction/v1/events/search?query=highest%20temperature%20Sao%20Paulo&limit=20`
-   and pick the event whose `metadata.closeTime` is still in the future (the
-   daily São Paulo market rolls over at 12:00 UTC). Take its `eventId`.
+2. **Aggregate — this is the anti-manipulation core, do it exactly.** Take the
+   median of the readings. **Drop** any reading more than 5°C from that median (a
+   lying or broken node, e.g. one reporting 999). Require at least **3** surviving
+   readings (quorum) — if fewer, refuse to settle and say the mesh lacks quorum.
+   The median of the survivors is the trusted value; note how many agreed and how
+   many you rejected (name the rejected one).
 
-3. **Read the outcome buckets.** GET
-   `https://api.jup.ag/prediction/v1/events/{eventId}?includeMarkets=true`.
-   Each entry in `markets` is a bucket; its label is
-   `metadata.groupItemTitle` (e.g. `23°C`, `21°C or below`, `31°C or higher`)
-   and its id is `marketId`. Read the integer °C out of each label.
+3. **Get the market and its buckets in ONE call.** GET
+   `https://api.jup.ag/prediction/v1/events/search?query=highest%20temperature%20Sao%20Paulo&includeMarkets=true&limit=20`.
+   Pick the event whose `metadata.closeTime` is still in the future (the daily
+   São Paulo market rolls over at 12:00 UTC). That event carries its outcome
+   buckets inline in its `markets` array. Each entry is a bucket; its label is
+   `metadata.groupItemTitle` (e.g. `23°C`, `21°C or below`, `31°C or higher`) and
+   its id is `marketId`. Read the integer °C out of each label.
 
 4. **Settle.** Round the mesh value to the nearest whole °C and pick the bucket
    whose integer is closest to it. That bucket is the winning outcome.
