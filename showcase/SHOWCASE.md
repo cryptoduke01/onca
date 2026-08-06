@@ -196,6 +196,34 @@ Agent: The sensor reading of 999 C is above the configured maximum of 85 C,
        so it has been refused.
 ```
 
+### Third-party trust (declared)
+
+Onca holds no key, but it does read from and speak to third parties. Named
+honestly, since trusting them is part of the tier:
+
+- **Model provider** (Anthropic Claude, or Groq as fallback) — sees every prompt.
+  It can never move funds or sign, because no tool it can call holds a key; a
+  compromised or prompt-injected model reads and builds unsigned, nothing more.
+- **RPC** (public devnet, or a user-supplied Helius/Solami endpoint) — a lying
+  RPC could hide or fake a node's attestation. The mesh blunts this: it would
+  have to lie *consistently across the batch* and still land inside tolerance to
+  move the median, and the reputation layer catches a source that drifts.
+- **Jupiter prediction API** — read-only market data (title, buckets, slug). If
+  it lied, we'd settle the wrong *market*, never the wrong *value*; the mesh
+  value is ours. Trading through it returns an unsigned tx a human signs.
+
+No third party holds a key on Onca's behalf. No MCP server, no facilitator.
+
+### Blockhash expiry (trap #1)
+
+An approval-gated attestation can sit in the queue while the human is away, and a
+transaction's blockhash dies in ~90 seconds. Onca sidesteps this by splitting
+build from sign: `depin-attest` builds the memo *unsigned*, and `onca-signer`
+fetches a **fresh** blockhash at the moment it signs — so the wait happens before
+the blockhash exists, never after. For flows that must pre-sign, `onca-core`
+ships the durable-nonce path (`AdvanceNonceAccount` as the first instruction) so
+the transaction stays valid indefinitely.
+
 ## ZeroClaw features used
 
 - **Self-hosted daemon** — my machine, my model, my keys.
