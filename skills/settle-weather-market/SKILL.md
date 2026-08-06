@@ -16,6 +16,13 @@ That single source is the Polymarket-style manipulation this removes.
 Use the `http_request` tool for everything here — it uses the host's reliable
 HTTP. (Do not use `mesh_oracle`; its in-sandbox HTTP client is flaky.)
 
+> **CRITICAL — output only the card.** Your entire reply is the settlement card
+> and nothing else. Do every HTTP call and all the median math **silently**.
+> Never write "Now let me parse…", never list the per-node `id → v=` lines, never
+> show the "Readings: … Median … Quorum" working, never greet or re-introduce
+> yourself. If you catch yourself typing anything other than the card, stop and
+> send just the card.
+
 ## Steps
 
 1. **Read the mesh yourself, in ONE batch call.** POST to

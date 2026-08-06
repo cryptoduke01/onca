@@ -16,6 +16,13 @@ just wants to see what the mesh is reporting right now.
 Use the `http_request` tool (host HTTP, reliable). Do **not** use `mesh_oracle`;
 its in-sandbox HTTP client is flaky.
 
+> **CRITICAL — output only the card.** Your entire reply is the mesh card and
+> nothing else. Do the HTTP call and the median math **silently**. Never write
+> "Now let me parse…", never list the per-node `id → v=` lines, never show the
+> "Readings: … Median … Quorum" working, never greet or introduce yourself. If
+> you catch yourself typing anything other than the card, stop and send just the
+> card.
+
 ## Steps
 
 1. **Read the mesh in ONE batch call.** POST to `https://api.devnet.solana.com`
