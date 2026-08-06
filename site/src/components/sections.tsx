@@ -275,7 +275,7 @@ export function SettlementSection() {
           </div>
 
           {/* The card the agent replies with, on-brand. */}
-          <div className="edge rounded-2xl p-6 sm:p-7">
+          <div className="glow-signal rounded-2xl p-6 sm:p-7">
             <div className="flex items-center gap-2 text-[0.9rem]">
               <span className="text-signal" aria-hidden="true">
                 )))
